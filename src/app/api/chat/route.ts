@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { agentOrchestrator } from '@/lib/agent/orchestrator';
-import { ChatMessage } from '@/lib/agent/types';
+import { agentOrchestrator } from '../../../../lib/agent/orchestrator';
+import { AgentResponse } from '../../../../lib/agent/types';
 
 export const runtime = 'edge';
 
@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
     
     // Create a TransformStream to stream the response
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
     
     // Create a readable stream for SSE
     let controller: ReadableStreamDefaultController;
@@ -31,7 +30,7 @@ export async function POST(req: NextRequest) {
     
     // Handle the research request asynchronously
     agentOrchestrator.handleResearchRequest(query)
-      .then((response) => {
+      .then((response: AgentResponse) => {
         // Send the final response
         if (controller) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -43,7 +42,7 @@ export async function POST(req: NextRequest) {
           controller.close();
         }
       })
-      .catch((error) => {
+      .catch((error: any) => {
         // Send error message
         if (controller) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
