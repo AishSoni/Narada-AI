@@ -39,3 +39,50 @@ export const MODEL_CONFIG = {
   QUALITY_MODEL: "gpt-4o",       // High-quality model for final synthesis
   TEMPERATURE: 0,                // Model temperature (0 = deterministic)
 } as const;
+
+// API Provider Configuration
+export const API_PROVIDERS = {
+  SEARCH: {
+    FIRECRAWL: 'firecrawl',
+    TAVILY: 'tavily',
+    SERP: 'serp'
+  },
+  LLM: {
+    OPENAI: 'openai',
+    OLLAMA: 'ollama',
+    OPENROUTER: 'openrouter'
+  },
+  EMBEDDING: {
+    OPENAI: 'openai',
+    OLLAMA: 'ollama'
+  }
+} as const;
+
+// Default Models
+export const DEFAULT_MODELS = {
+  OPENAI_EMBEDDING: 'text-embedding-3-small',
+  OLLAMA_EMBEDDING: 'nomic-embed-text',
+  OPENAI_LLM: 'gpt-4o-mini',
+  OLLAMA_LLM: 'llama3.2',
+} as const;
+
+// Environment Variable Keys
+export const ENV_KEYS = {
+  // Search API
+  SEARCH_API_PROVIDER: 'SEARCH_API_PROVIDER',
+  FIRECRAWL_API_KEY: 'FIRECRAWL_API_KEY',
+  TAVILY_API_KEY: 'TAVILY_API_KEY',
+  SERP_API_KEY: 'SERP_API_KEY',
+  
+  // LLM Provider
+  LLM_PROVIDER: 'LLM_PROVIDER',
+  OPENAI_API_KEY: 'OPENAI_API_KEY',
+  OLLAMA_API_URL: 'OLLAMA_API_URL',
+  OPENROUTER_API_KEY: 'OPENROUTER_API_KEY',
+  
+  // Embedding Provider
+  EMBEDDING_PROVIDER: 'EMBEDDING_PROVIDER',
+  OPENAI_EMBEDDING_MODEL: 'OPENAI_EMBEDDING_MODEL',
+  OLLAMA_EMBEDDING_MODEL: 'OLLAMA_EMBEDDING_MODEL',
+  OLLAMA_EMBEDDING_URL: 'OLLAMA_EMBEDDING_URL',
+} as const;

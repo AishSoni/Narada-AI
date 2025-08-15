@@ -16,6 +16,7 @@ Welcome to **Narada AI Deep Research Agent** – your comprehensive research com
 - **📚 Local Knowledge Bases**: Powered by Qdrant vector database for document search and retrieval
 - **🔧 MCP Server Support**: Extensible architecture supporting Model Context Protocol servers
 - **📱 Responsive UI**: Modern, clean interface built with Next.js and Tailwind CSS
+- **⚙️ Settings Management**: Web-based configuration for API providers, keys, and models
 - **🔒 Privacy-First**: All data processing can be done locally for maximum privacy
 - **🧠 Smart Query Decomposition**: Breaks complex queries into multiple focused searches
 - **✅ Answer Validation**: Verifies sources contain actual answers (0.7+ confidence threshold)
@@ -117,6 +118,46 @@ npm run dev
 
 ## ⚙️ Configuration
 
+Narada AI offers two ways to configure your API providers and settings:
+
+### Method 1: Settings Page (Recommended)
+
+1. Start the application: `npm run dev`
+2. Click the "Settings" button in the top-right corner
+3. Configure your API providers:
+   - Choose your search provider (FireCrawl, Tavily, or SERP)
+   - Choose your LLM provider (OpenAI, Ollama, or OpenRouter)  
+   - Choose your embedding provider (OpenAI or Ollama)
+4. Enter your API keys for the selected providers
+5. Test your configuration using the "Test Configuration" button
+6. Save your settings
+
+Settings are automatically saved to `.env.local` and loaded on startup.
+
+### Method 2: Manual Environment Configuration
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env.local
+```
+
+2. Edit `.env.local` with your API keys and provider choices:
+```bash
+# Search Provider
+SEARCH_API_PROVIDER=firecrawl
+FIRECRAWL_API_KEY=fc-your-api-key-here
+
+# LLM Provider  
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-your-openai-api-key-here
+
+# Embedding Provider
+EMBEDDING_PROVIDER=openai
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+```
+
+### API Provider Setup
+
 ### 1. Tavily API Setup
 
 1. Sign up at [tavily.com](https://tavily.com)
@@ -175,10 +216,27 @@ Add MCP servers through the Settings page to extend the agent's capabilities wit
 
 ### Settings
 
-Configure all integrations through the Settings page:
-- Test API connections
-- Configure model preferences
-- Manage MCP servers
+Configure all integrations through the **Settings page** (click the Settings button in the top-right):
+
+#### Search API Provider
+- **FireCrawl**: Advanced web scraping with JavaScript rendering
+- **Tavily**: AI-powered search API optimized for research
+- **SERP API**: Direct Google search results
+
+#### Language Model Provider  
+- **OpenAI**: GPT-4o, GPT-4o-mini models
+- **Ollama**: Local LLM hosting (llama3.2, mistral, etc.)
+- **OpenRouter**: Access to multiple model providers
+
+#### Embedding Model Provider
+- **OpenAI**: text-embedding-3-small/large, ada-002
+- **Ollama**: Local embedding models (nomic-embed-text, mxbai-embed-large)
+
+#### Features:
+- **API Key Management**: Securely store and manage all API keys
+- **Configuration Testing**: Test all API connections before saving
+- **Model Selection**: Choose specific models for each provider
+- **Environment Integration**: Settings are saved to `.env.local`
 
 ## 🛠️ Development
 
