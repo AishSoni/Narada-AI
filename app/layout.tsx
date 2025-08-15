@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,10 +29,12 @@ export default function RootLayout({
           inter.variable
         )}
       >
-        <main className="">
-          {children}
-        </main>
-        <Toaster />
+        <ThemeProvider>
+          <main className="">
+            {children}
+          </main>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

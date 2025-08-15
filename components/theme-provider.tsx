@@ -116,7 +116,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Prevent hydration mismatch
   if (!mounted) {
-    return <>{children}</>
+    return (
+      <ThemeContext.Provider value={{
+        theme: THEME_CONFIG.DEFAULT_THEME as Theme,
+        setTheme: () => {},
+        resolvedTheme: 'light'
+      }}>
+        {children}
+      </ThemeContext.Provider>
+    )
   }
 
   return (
