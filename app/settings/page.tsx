@@ -20,8 +20,10 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Eye, EyeOff, Key, Settings as SettingsIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Save, Eye, EyeOff, Key, Settings as SettingsIcon, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { SEARCH_CONFIG } from "@/lib/config";
 
 interface EnvironmentConfig {
   // Search API Provider
@@ -44,6 +46,29 @@ interface EnvironmentConfig {
   OPENAI_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_URL: string;
+  
+  // Vector Database Provider
+  VECTOR_DB_PROVIDER: string;
+  QDRANT_API_KEY: string;
+  QDRANT_URL: string;
+  QDRANT_COLLECTION_NAME: string;
+  
+  // Advanced Search Settings
+  MAX_SEARCH_QUERIES: number;
+  MAX_SOURCES_PER_SEARCH: number;
+  MAX_SOURCES_TO_SCRAPE: number;
+  MIN_CONTENT_LENGTH: number;
+  SUMMARY_CHAR_LIMIT: number;
+  CONTEXT_PREVIEW_LENGTH: number;
+  ANSWER_CHECK_PREVIEW: number;
+  MAX_SOURCES_TO_CHECK: number;
+  MAX_RETRIES: number;
+  MAX_SEARCH_ATTEMPTS: number;
+  MIN_ANSWER_CONFIDENCE: number;
+  EARLY_TERMINATION_CONFIDENCE: number;
+  SCRAPE_TIMEOUT: number;
+  SOURCE_ANIMATION_DELAY: number;
+  PARALLEL_SUMMARY_GENERATION: boolean;
 }
 
 const SEARCH_PROVIDERS = [
@@ -61,6 +86,10 @@ const LLM_PROVIDERS = [
 const EMBEDDING_PROVIDERS = [
   { value: 'openai', label: 'OpenAI', description: 'text-embedding-3-small/large' },
   { value: 'ollama', label: 'Ollama', description: 'Local embedding models' }
+];
+
+const VECTOR_DB_PROVIDERS = [
+  { value: 'qdrant', label: 'Qdrant', description: 'High-performance vector database' }
 ];
 
 interface ModelInfo {
@@ -85,7 +114,27 @@ export default function SettingsPage() {
     EMBEDDING_PROVIDER: 'openai',
     OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
     OLLAMA_EMBEDDING_MODEL: 'nomic-embed-text',
-    OLLAMA_EMBEDDING_URL: 'http://localhost:11434'
+    OLLAMA_EMBEDDING_URL: 'http://localhost:11434',
+    VECTOR_DB_PROVIDER: 'qdrant',
+    QDRANT_API_KEY: '',
+    QDRANT_URL: 'http://localhost:6333',
+    QDRANT_COLLECTION_NAME: 'narada_vectors',
+    // Advanced Search Settings with defaults from SEARCH_CONFIG
+    MAX_SEARCH_QUERIES: SEARCH_CONFIG.MAX_SEARCH_QUERIES,
+    MAX_SOURCES_PER_SEARCH: SEARCH_CONFIG.MAX_SOURCES_PER_SEARCH,
+    MAX_SOURCES_TO_SCRAPE: SEARCH_CONFIG.MAX_SOURCES_TO_SCRAPE,
+    MIN_CONTENT_LENGTH: SEARCH_CONFIG.MIN_CONTENT_LENGTH,
+    SUMMARY_CHAR_LIMIT: SEARCH_CONFIG.SUMMARY_CHAR_LIMIT,
+    CONTEXT_PREVIEW_LENGTH: SEARCH_CONFIG.CONTEXT_PREVIEW_LENGTH,
+    ANSWER_CHECK_PREVIEW: SEARCH_CONFIG.ANSWER_CHECK_PREVIEW,
+    MAX_SOURCES_TO_CHECK: SEARCH_CONFIG.MAX_SOURCES_TO_CHECK,
+    MAX_RETRIES: SEARCH_CONFIG.MAX_RETRIES,
+    MAX_SEARCH_ATTEMPTS: SEARCH_CONFIG.MAX_SEARCH_ATTEMPTS,
+    MIN_ANSWER_CONFIDENCE: SEARCH_CONFIG.MIN_ANSWER_CONFIDENCE,
+    EARLY_TERMINATION_CONFIDENCE: SEARCH_CONFIG.EARLY_TERMINATION_CONFIDENCE,
+    SCRAPE_TIMEOUT: SEARCH_CONFIG.SCRAPE_TIMEOUT,
+    SOURCE_ANIMATION_DELAY: SEARCH_CONFIG.SOURCE_ANIMATION_DELAY,
+    PARALLEL_SUMMARY_GENERATION: SEARCH_CONFIG.PARALLEL_SUMMARY_GENERATION,
   });
 
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
@@ -93,6 +142,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, boolean>>({});
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   
   // Dynamic model states
   const [llmModels, setLlmModels] = useState<ModelInfo[]>([]);
@@ -299,7 +349,7 @@ export default function SettingsPage() {
     setShowKeys(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const updateConfig = (key: keyof EnvironmentConfig, value: string) => {
+  const updateConfig = (key: keyof EnvironmentConfig, value: string | number | boolean) => {
     setConfig(prev => ({ ...prev, [key]: value }));
   };
 
@@ -687,6 +737,309 @@ export default function SettingsPage() {
                 </>
               )}
             </CardContent>
+          </Card>
+
+          {/* Vector Database Provider Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Vector Database Provider</CardTitle>
+              <CardDescription>
+                Configure your vector database for storing and searching embeddings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select
+                  value={config.VECTOR_DB_PROVIDER}
+                  onValueChange={(value: string) => updateConfig('VECTOR_DB_PROVIDER', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VECTOR_DB_PROVIDERS.map(provider => (
+                      <SelectItem key={provider.value} value={provider.value}>
+                        <div>
+                          <div className="font-medium">{provider.label}</div>
+                          <div className="text-sm text-muted-foreground">{provider.description}</div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {config.VECTOR_DB_PROVIDER === 'qdrant' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="QDRANT_URL">Qdrant URL</Label>
+                    <Input
+                      id="QDRANT_URL"
+                      placeholder="http://localhost:6333"
+                      value={config.QDRANT_URL}
+                      onChange={(e) => updateConfig('QDRANT_URL', e.target.value)}
+                    />
+                  </div>
+                  {renderApiKeyInput('QDRANT_API_KEY', 'Qdrant API Key (optional for local)', 'qdr_...')}
+                  <div className="space-y-2">
+                    <Label htmlFor="QDRANT_COLLECTION_NAME">Collection Name</Label>
+                    <Input
+                      id="QDRANT_COLLECTION_NAME"
+                      placeholder="narada_vectors"
+                      value={config.QDRANT_COLLECTION_NAME}
+                      onChange={(e) => updateConfig('QDRANT_COLLECTION_NAME', e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Advanced Settings Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <SettingsIcon className="h-5 w-5" />
+                  <CardTitle>Advanced Settings</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-advanced"
+                    checked={showAdvancedSettings}
+                    onCheckedChange={(checked) => setShowAdvancedSettings(checked as boolean)}
+                  />
+                  <Label htmlFor="show-advanced" className="text-sm cursor-pointer">
+                    Show Advanced Settings
+                  </Label>
+                  {showAdvancedSettings ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+              <CardDescription>
+                Fine-tune search engine performance and behavior
+              </CardDescription>
+            </CardHeader>
+            {showAdvancedSettings && (
+              <CardContent className="space-y-6">
+                {/* Search Query Settings */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-foreground border-b pb-2">Search Query Settings</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="MAX_SEARCH_QUERIES">Max Search Queries</Label>
+                      <Input
+                        id="MAX_SEARCH_QUERIES"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={config.MAX_SEARCH_QUERIES}
+                        onChange={(e) => updateConfig('MAX_SEARCH_QUERIES', parseInt(e.target.value) || 4)}
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum number of search queries to generate (1-10)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="MAX_SOURCES_PER_SEARCH">Max Sources Per Search</Label>
+                      <Input
+                        id="MAX_SOURCES_PER_SEARCH"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={config.MAX_SOURCES_PER_SEARCH}
+                        onChange={(e) => updateConfig('MAX_SOURCES_PER_SEARCH', parseInt(e.target.value) || 6)}
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum sources to return per search query (1-20)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="MAX_SOURCES_TO_SCRAPE">Max Sources to Scrape</Label>
+                      <Input
+                        id="MAX_SOURCES_TO_SCRAPE"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={config.MAX_SOURCES_TO_SCRAPE}
+                        onChange={(e) => updateConfig('MAX_SOURCES_TO_SCRAPE', parseInt(e.target.value) || 6)}
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum sources to scrape for additional content (1-20)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="MAX_SOURCES_TO_CHECK">Max Sources to Check</Label>
+                      <Input
+                        id="MAX_SOURCES_TO_CHECK"
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={config.MAX_SOURCES_TO_CHECK}
+                        onChange={(e) => updateConfig('MAX_SOURCES_TO_CHECK', parseInt(e.target.value) || 10)}
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum sources to check for answers (1-50)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Processing Settings */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-foreground border-b pb-2">Content Processing</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="MIN_CONTENT_LENGTH">Min Content Length</Label>
+                      <Input
+                        id="MIN_CONTENT_LENGTH"
+                        type="number"
+                        min="50"
+                        max="1000"
+                        value={config.MIN_CONTENT_LENGTH}
+                        onChange={(e) => updateConfig('MIN_CONTENT_LENGTH', parseInt(e.target.value) || 100)}
+                      />
+                      <p className="text-xs text-muted-foreground">Minimum content length to consider valid (50-1000 chars)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="SUMMARY_CHAR_LIMIT">Summary Character Limit</Label>
+                      <Input
+                        id="SUMMARY_CHAR_LIMIT"
+                        type="number"
+                        min="50"
+                        max="500"
+                        value={config.SUMMARY_CHAR_LIMIT}
+                        onChange={(e) => updateConfig('SUMMARY_CHAR_LIMIT', parseInt(e.target.value) || 100)}
+                      />
+                      <p className="text-xs text-muted-foreground">Character limit for source summaries (50-500 chars)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="CONTEXT_PREVIEW_LENGTH">Context Preview Length</Label>
+                      <Input
+                        id="CONTEXT_PREVIEW_LENGTH"
+                        type="number"
+                        min="100"
+                        max="2000"
+                        value={config.CONTEXT_PREVIEW_LENGTH}
+                        onChange={(e) => updateConfig('CONTEXT_PREVIEW_LENGTH', parseInt(e.target.value) || 500)}
+                      />
+                      <p className="text-xs text-muted-foreground">Preview length for previous context (100-2000 chars)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ANSWER_CHECK_PREVIEW">Answer Check Preview</Label>
+                      <Input
+                        id="ANSWER_CHECK_PREVIEW"
+                        type="number"
+                        min="500"
+                        max="5000"
+                        value={config.ANSWER_CHECK_PREVIEW}
+                        onChange={(e) => updateConfig('ANSWER_CHECK_PREVIEW', parseInt(e.target.value) || 2500)}
+                      />
+                      <p className="text-xs text-muted-foreground">Content preview length for answer checking (500-5000 chars)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Retry and Confidence Settings */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-foreground border-b pb-2">Retry Logic & Confidence</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="MAX_RETRIES">Max Retries</Label>
+                      <Input
+                        id="MAX_RETRIES"
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={config.MAX_RETRIES}
+                        onChange={(e) => updateConfig('MAX_RETRIES', parseInt(e.target.value) || 2)}
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum retry attempts for failed operations (0-10)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="MAX_SEARCH_ATTEMPTS">Max Search Attempts</Label>
+                      <Input
+                        id="MAX_SEARCH_ATTEMPTS"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={config.MAX_SEARCH_ATTEMPTS}
+                        onChange={(e) => updateConfig('MAX_SEARCH_ATTEMPTS', parseInt(e.target.value) || 3)}
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum attempts to find answers via search (1-10)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="MIN_ANSWER_CONFIDENCE">Min Answer Confidence</Label>
+                      <Input
+                        id="MIN_ANSWER_CONFIDENCE"
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={config.MIN_ANSWER_CONFIDENCE}
+                        onChange={(e) => updateConfig('MIN_ANSWER_CONFIDENCE', parseFloat(e.target.value) || 0.3)}
+                      />
+                      <p className="text-xs text-muted-foreground">Minimum confidence (0-1) that a question was answered</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="EARLY_TERMINATION_CONFIDENCE">Early Termination Confidence</Label>
+                      <Input
+                        id="EARLY_TERMINATION_CONFIDENCE"
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={config.EARLY_TERMINATION_CONFIDENCE}
+                        onChange={(e) => updateConfig('EARLY_TERMINATION_CONFIDENCE', parseFloat(e.target.value) || 0.8)}
+                      />
+                      <p className="text-xs text-muted-foreground">Confidence level to skip additional searches (0-1)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance Settings */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-foreground border-b pb-2">Performance & Timing</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="SCRAPE_TIMEOUT">Scrape Timeout (ms)</Label>
+                      <Input
+                        id="SCRAPE_TIMEOUT"
+                        type="number"
+                        min="5000"
+                        max="60000"
+                        step="1000"
+                        value={config.SCRAPE_TIMEOUT}
+                        onChange={(e) => updateConfig('SCRAPE_TIMEOUT', parseInt(e.target.value) || 15000)}
+                      />
+                      <p className="text-xs text-muted-foreground">Timeout for scraping operations (5000-60000 ms)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="SOURCE_ANIMATION_DELAY">Source Animation Delay (ms)</Label>
+                      <Input
+                        id="SOURCE_ANIMATION_DELAY"
+                        type="number"
+                        min="0"
+                        max="500"
+                        step="10"
+                        value={config.SOURCE_ANIMATION_DELAY}
+                        onChange={(e) => updateConfig('SOURCE_ANIMATION_DELAY', parseInt(e.target.value) || 50)}
+                      />
+                      <p className="text-xs text-muted-foreground">Delay between source animations (0-500 ms)</p>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="PARALLEL_SUMMARY_GENERATION"
+                          checked={config.PARALLEL_SUMMARY_GENERATION}
+                          onCheckedChange={(checked) => updateConfig('PARALLEL_SUMMARY_GENERATION', checked as boolean)}
+                        />
+                        <Label htmlFor="PARALLEL_SUMMARY_GENERATION" className="cursor-pointer">
+                          Enable Parallel Summary Generation
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Generate summaries in parallel for better performance</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            )}
           </Card>
         </div>
 

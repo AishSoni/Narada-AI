@@ -55,6 +55,9 @@ export const API_PROVIDERS = {
   EMBEDDING: {
     OPENAI: 'openai',
     OLLAMA: 'ollama'
+  },
+  VECTOR_DB: {
+    QDRANT: 'qdrant'
   }
 } as const;
 
@@ -65,6 +68,21 @@ export const DEFAULT_MODELS = {
   OPENAI_LLM: 'gpt-4o-mini',
   OLLAMA_LLM: 'llama3.2',
   OPENROUTER_LLM: 'openai/gpt-4o-mini',
+} as const;
+
+// Vector Database Configuration
+export const VECTOR_DB_CONFIG = {
+  QDRANT: {
+    DEFAULT_COLLECTION_NAME: 'narada_vectors',
+    DEFAULT_VECTOR_SIZE: 1536,        // Default for OpenAI text-embedding-3-small
+    DEFAULT_DISTANCE_METRIC: 'cosine',
+    DEFAULT_HOST: 'localhost',
+    DEFAULT_PORT: 6333,
+    DEFAULT_HTTPS: false,
+    BATCH_SIZE: 100,                  // Number of vectors to upsert in one batch
+    SEARCH_LIMIT: 10,                 // Default number of similar vectors to retrieve
+    SEARCH_SCORE_THRESHOLD: 0.7,      // Minimum similarity score for search results
+  }
 } as const;
 
 // Environment Variable Keys
@@ -89,4 +107,10 @@ export const ENV_KEYS = {
   OPENAI_EMBEDDING_MODEL: 'OPENAI_EMBEDDING_MODEL',
   OLLAMA_EMBEDDING_MODEL: 'OLLAMA_EMBEDDING_MODEL',
   OLLAMA_EMBEDDING_URL: 'OLLAMA_EMBEDDING_URL',
+  
+  // Vector Database Provider
+  VECTOR_DB_PROVIDER: 'VECTOR_DB_PROVIDER',
+  QDRANT_API_KEY: 'QDRANT_API_KEY',
+  QDRANT_URL: 'QDRANT_URL',
+  QDRANT_COLLECTION_NAME: 'QDRANT_COLLECTION_NAME',
 } as const;
