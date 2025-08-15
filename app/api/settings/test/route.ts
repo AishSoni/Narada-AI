@@ -7,8 +7,11 @@ interface TestConfig {
   SERP_API_KEY: string;
   LLM_PROVIDER: string;
   OPENAI_API_KEY: string;
+  OPENAI_LLM_MODEL: string;
   OLLAMA_API_URL: string;
+  OLLAMA_LLM_MODEL: string;
   OPENROUTER_API_KEY: string;
+  OPENROUTER_LLM_MODEL: string;
   EMBEDDING_PROVIDER: string;
   OPENAI_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_MODEL: string;

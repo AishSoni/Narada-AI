@@ -64,6 +64,7 @@ export const DEFAULT_MODELS = {
   OLLAMA_EMBEDDING: 'nomic-embed-text',
   OPENAI_LLM: 'gpt-4o-mini',
   OLLAMA_LLM: 'llama3.2',
+  OPENROUTER_LLM: 'openai/gpt-4o-mini',
 } as const;
 
 // Environment Variable Keys
@@ -77,8 +78,11 @@ export const ENV_KEYS = {
   // LLM Provider
   LLM_PROVIDER: 'LLM_PROVIDER',
   OPENAI_API_KEY: 'OPENAI_API_KEY',
+  OPENAI_LLM_MODEL: 'OPENAI_LLM_MODEL',
   OLLAMA_API_URL: 'OLLAMA_API_URL',
+  OLLAMA_LLM_MODEL: 'OLLAMA_LLM_MODEL',
   OPENROUTER_API_KEY: 'OPENROUTER_API_KEY',
+  OPENROUTER_LLM_MODEL: 'OPENROUTER_LLM_MODEL',
   
   // Embedding Provider
   EMBEDDING_PROVIDER: 'EMBEDDING_PROVIDER',

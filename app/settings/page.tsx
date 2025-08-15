@@ -33,8 +33,11 @@ interface EnvironmentConfig {
   // LLM Provider
   LLM_PROVIDER: string;
   OPENAI_API_KEY: string;
+  OPENAI_LLM_MODEL: string;
   OLLAMA_API_URL: string;
+  OLLAMA_LLM_MODEL: string;
   OPENROUTER_API_KEY: string;
+  OPENROUTER_LLM_MODEL: string;
   
   // Embedding Provider
   EMBEDDING_PROVIDER: string;
@@ -60,18 +63,11 @@ const EMBEDDING_PROVIDERS = [
   { value: 'ollama', label: 'Ollama', description: 'Local embedding models' }
 ];
 
-const OPENAI_EMBEDDING_MODELS = [
-  'text-embedding-3-small',
-  'text-embedding-3-large',
-  'text-embedding-ada-002'
-];
-
-const OLLAMA_EMBEDDING_MODELS = [
-  'nomic-embed-text',
-  'mxbai-embed-large',
-  'all-minilm',
-  'snowflake-arctic-embed'
-];
+interface ModelInfo {
+  id: string;
+  name: string;
+  description?: string;
+}
 
 export default function SettingsPage() {
   const [config, setConfig] = useState<EnvironmentConfig>({
@@ -81,8 +77,11 @@ export default function SettingsPage() {
     SERP_API_KEY: '',
     LLM_PROVIDER: 'openai',
     OPENAI_API_KEY: '',
+    OPENAI_LLM_MODEL: 'gpt-4o-mini',
     OLLAMA_API_URL: 'http://localhost:11434',
+    OLLAMA_LLM_MODEL: 'llama3.2',
     OPENROUTER_API_KEY: '',
+    OPENROUTER_LLM_MODEL: 'openai/gpt-4o-mini',
     EMBEDDING_PROVIDER: 'openai',
     OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
     OLLAMA_EMBEDDING_MODEL: 'nomic-embed-text',
@@ -94,11 +93,141 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, boolean>>({});
+  
+  // Dynamic model states
+  const [llmModels, setLlmModels] = useState<ModelInfo[]>([]);
+  const [embeddingModels, setEmbeddingModels] = useState<ModelInfo[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
 
   // Load current configuration on mount
   useEffect(() => {
     loadConfiguration();
   }, []);
+
+  // Fetch models when provider changes
+  useEffect(() => {
+    if (config.LLM_PROVIDER) {
+      // Debounce the fetch to avoid excessive calls while typing URLs
+      const timeoutId = setTimeout(() => {
+        fetchLLMModels();
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [config.LLM_PROVIDER, config.OPENAI_API_KEY, config.OLLAMA_API_URL, config.OPENROUTER_API_KEY]);
+
+  useEffect(() => {
+    if (config.EMBEDDING_PROVIDER) {
+      // Debounce the fetch to avoid excessive calls while typing URLs
+      const timeoutId = setTimeout(() => {
+        fetchEmbeddingModels();
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [config.EMBEDDING_PROVIDER, config.OPENAI_API_KEY, config.OLLAMA_EMBEDDING_URL]);
+
+  const fetchLLMModels = async () => {
+    // Don't fetch if no provider is selected or if required credentials are missing
+    if (!config.LLM_PROVIDER) return;
+    
+    // For OpenAI and OpenRouter, don't fetch without API key
+    if ((config.LLM_PROVIDER === 'openai' || config.LLM_PROVIDER === 'openrouter') && 
+        (!config.OPENAI_API_KEY || config.OPENAI_API_KEY.includes('•••') || 
+         !config.OPENROUTER_API_KEY || config.OPENROUTER_API_KEY.includes('•••'))) {
+      setLlmModels([]);
+      return;
+    }
+
+    // For Ollama, don't fetch with invalid URLs
+    if (config.LLM_PROVIDER === 'ollama' && config.OLLAMA_API_URL) {
+      try {
+        new URL(config.OLLAMA_API_URL); // Validate URL format
+      } catch {
+        setLlmModels([]);
+        return;
+      }
+    }
+
+    setIsLoadingModels(true);
+    try {
+      const params = new URLSearchParams({
+        provider: config.LLM_PROVIDER,
+      });
+
+      if (config.LLM_PROVIDER === 'openai' && config.OPENAI_API_KEY && !config.OPENAI_API_KEY.includes('•••')) {
+        params.append('apiKey', config.OPENAI_API_KEY);
+      } else if (config.LLM_PROVIDER === 'ollama' && config.OLLAMA_API_URL) {
+        params.append('apiUrl', config.OLLAMA_API_URL);
+      } else if (config.LLM_PROVIDER === 'openrouter' && config.OPENROUTER_API_KEY && !config.OPENROUTER_API_KEY.includes('•••')) {
+        params.append('apiKey', config.OPENROUTER_API_KEY);
+      }
+
+      const response = await fetch(`/api/models?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLlmModels(data.models || []);
+      } else {
+        // Don't log errors for expected failures (missing API keys, etc.)
+        setLlmModels([]);
+      }
+    } catch (error) {
+      // Only log unexpected errors
+      if (!(error instanceof TypeError) || !error.message.includes('fetch')) {
+        console.error('Error fetching LLM models:', error);
+      }
+      setLlmModels([]);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  const fetchEmbeddingModels = async () => {
+    // Don't fetch if no provider is selected
+    if (!config.EMBEDDING_PROVIDER) return;
+
+    // For OpenAI, don't fetch without API key
+    if (config.EMBEDDING_PROVIDER === 'openai' && 
+        (!config.OPENAI_API_KEY || config.OPENAI_API_KEY.includes('•••'))) {
+      setEmbeddingModels([]);
+      return;
+    }
+
+    // For Ollama, don't fetch with invalid URLs
+    if (config.EMBEDDING_PROVIDER === 'ollama' && config.OLLAMA_EMBEDDING_URL) {
+      try {
+        new URL(config.OLLAMA_EMBEDDING_URL); // Validate URL format
+      } catch {
+        setEmbeddingModels([]);
+        return;
+      }
+    }
+
+    try {
+      const params = new URLSearchParams({
+        provider: config.EMBEDDING_PROVIDER,
+      });
+
+      if (config.EMBEDDING_PROVIDER === 'openai' && config.OPENAI_API_KEY && !config.OPENAI_API_KEY.includes('•••')) {
+        params.append('apiKey', config.OPENAI_API_KEY);
+      } else if (config.EMBEDDING_PROVIDER === 'ollama' && config.OLLAMA_EMBEDDING_URL) {
+        params.append('apiUrl', config.OLLAMA_EMBEDDING_URL);
+      }
+
+      const response = await fetch(`/api/models/embeddings?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEmbeddingModels(data.models || []);
+      } else {
+        // Don't log errors for expected failures (missing API keys, etc.)
+        setEmbeddingModels([]);
+      }
+    } catch (error) {
+      // Only log unexpected errors
+      if (!(error instanceof TypeError) || !error.message.includes('fetch')) {
+        console.error('Error fetching embedding models:', error);
+      }
+      setEmbeddingModels([]);
+    }
+  };
 
   const loadConfiguration = async () => {
     setIsLoading(true);
@@ -335,25 +464,118 @@ export default function SettingsPage() {
                 </Select>
               </div>
 
-              {config.LLM_PROVIDER === 'openai' && 
-                renderApiKeyInput('OPENAI_API_KEY', 'OpenAI API Key', 'sk-...')
-              }
-              
-              {config.LLM_PROVIDER === 'ollama' && (
-                <div className="space-y-2">
-                  <Label htmlFor="OLLAMA_API_URL">Ollama API URL</Label>
-                  <Input
-                    id="OLLAMA_API_URL"
-                    placeholder="http://localhost:11434"
-                    value={config.OLLAMA_API_URL}
-                    onChange={(e) => updateConfig('OLLAMA_API_URL', e.target.value)}
-                  />
-                </div>
+              {config.LLM_PROVIDER === 'openai' && (
+                <>
+                  {renderApiKeyInput('OPENAI_API_KEY', 'OpenAI API Key', 'sk-...')}
+                  <div className="space-y-2">
+                    <Label>Model</Label>
+                    <Select
+                      value={config.OPENAI_LLM_MODEL}
+                      onValueChange={(value: string) => updateConfig('OPENAI_LLM_MODEL', value)}
+                      disabled={isLoadingModels || llmModels.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {llmModels.map((model: ModelInfo) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            <div>
+                              <div className="font-medium">{model.name}</div>
+                              {model.description && (
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {llmModels.length === 0 && !isLoadingModels && (
+                      <p className="text-sm text-muted-foreground">
+                        Enter your API key above to load available models
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
               
-              {config.LLM_PROVIDER === 'openrouter' && 
-                renderApiKeyInput('OPENROUTER_API_KEY', 'OpenRouter API Key', 'sk-or-...')
-              }
+              {config.LLM_PROVIDER === 'ollama' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="OLLAMA_API_URL">Ollama API URL</Label>
+                    <Input
+                      id="OLLAMA_API_URL"
+                      placeholder="http://localhost:11434"
+                      value={config.OLLAMA_API_URL}
+                      onChange={(e) => updateConfig('OLLAMA_API_URL', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Model</Label>
+                    <Select
+                      value={config.OLLAMA_LLM_MODEL}
+                      onValueChange={(value: string) => updateConfig('OLLAMA_LLM_MODEL', value)}
+                      disabled={isLoadingModels}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {llmModels.map((model: ModelInfo) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            <div>
+                              <div className="font-medium">{model.name}</div>
+                              {model.description && (
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {llmModels.length === 0 && !isLoadingModels && (
+                      <p className="text-sm text-muted-foreground">
+                        Check your Ollama API URL and ensure Ollama is running
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+              
+              {config.LLM_PROVIDER === 'openrouter' && (
+                <>
+                  {renderApiKeyInput('OPENROUTER_API_KEY', 'OpenRouter API Key', 'sk-or-...')}
+                  <div className="space-y-2">
+                    <Label>Model</Label>
+                    <Select
+                      value={config.OPENROUTER_LLM_MODEL}
+                      onValueChange={(value: string) => updateConfig('OPENROUTER_LLM_MODEL', value)}
+                      disabled={isLoadingModels || llmModels.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {llmModels.map((model: ModelInfo) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            <div>
+                              <div className="font-medium">{model.name.split('/')[1] || model.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {model.name.split('/')[0]} • {model.description}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {llmModels.length === 0 && !isLoadingModels && (
+                      <p className="text-sm text-muted-foreground">
+                        Enter your API key above to load available models
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -396,16 +618,29 @@ export default function SettingsPage() {
                     <Select
                       value={config.OPENAI_EMBEDDING_MODEL}
                       onValueChange={(value: string) => updateConfig('OPENAI_EMBEDDING_MODEL', value)}
+                      disabled={embeddingModels.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select a model" />
                       </SelectTrigger>
                       <SelectContent>
-                        {OPENAI_EMBEDDING_MODELS.map(model => (
-                          <SelectItem key={model} value={model}>{model}</SelectItem>
+                        {embeddingModels.map((model: ModelInfo) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            <div>
+                              <div className="font-medium">{model.name}</div>
+                              {model.description && (
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
+                              )}
+                            </div>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {embeddingModels.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Enter your API key above to load available models
+                      </p>
+                    )}
                   </div>
                 </>
               )}
@@ -428,14 +663,26 @@ export default function SettingsPage() {
                       onValueChange={(value: string) => updateConfig('OLLAMA_EMBEDDING_MODEL', value)}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select a model" />
                       </SelectTrigger>
                       <SelectContent>
-                        {OLLAMA_EMBEDDING_MODELS.map(model => (
-                          <SelectItem key={model} value={model}>{model}</SelectItem>
+                        {embeddingModels.map((model: ModelInfo) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            <div>
+                              <div className="font-medium">{model.name}</div>
+                              {model.description && (
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
+                              )}
+                            </div>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {embeddingModels.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Check your Ollama API URL and ensure Ollama is running with embedding models
+                      </p>
+                    )}
                   </div>
                 </>
               )}

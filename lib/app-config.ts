@@ -9,6 +9,7 @@ export interface AppConfig {
   llmProvider: string;
   llmApiKey: string;
   llmApiUrl?: string;
+  llmModel: string;
   
   // Embedding Configuration
   embeddingProvider: string;
@@ -42,15 +43,19 @@ export function getAppConfig(): AppConfig {
   // Determine LLM configuration based on provider
   let llmApiKey = '';
   let llmApiUrl = '';
+  let llmModel = '';
   switch (llmProvider) {
     case API_PROVIDERS.LLM.OPENAI:
       llmApiKey = process.env.OPENAI_API_KEY || '';
+      llmModel = process.env.OPENAI_LLM_MODEL || DEFAULT_MODELS.OPENAI_LLM;
       break;
     case API_PROVIDERS.LLM.OLLAMA:
       llmApiUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434';
+      llmModel = process.env.OLLAMA_LLM_MODEL || DEFAULT_MODELS.OLLAMA_LLM;
       break;
     case API_PROVIDERS.LLM.OPENROUTER:
       llmApiKey = process.env.OPENROUTER_API_KEY || '';
+      llmModel = process.env.OPENROUTER_LLM_MODEL || DEFAULT_MODELS.OPENROUTER_LLM;
       break;
   }
   
@@ -75,6 +80,7 @@ export function getAppConfig(): AppConfig {
     llmProvider,
     llmApiKey,
     llmApiUrl,
+    llmModel,
     embeddingProvider,
     embeddingApiKey,
     embeddingModel,
