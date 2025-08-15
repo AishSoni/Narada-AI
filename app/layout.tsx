@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Firecrawl",
-  description: "A Firecrawl template",
+  title: "Narada AI - Deep Research Agent",
+  description: "Intelligent multi-source research powered by AI. Comprehensive web research using Firecrawl, Tavily, and advanced language models.",
 };
 
 export default function RootLayout({
