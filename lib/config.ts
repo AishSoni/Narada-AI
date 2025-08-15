@@ -33,6 +33,15 @@ export const UI_CONFIG = {
   MESSAGE_CYCLE_DELAY: 2000,     // Delay for cycling through messages (ms)
 } as const;
 
+// Theme Configuration
+export const THEME_CONFIG = {
+  AUTO_DARK_START_HOUR: 18,      // Hour to switch to dark mode (6 PM)
+  AUTO_DARK_END_HOUR: 6,         // Hour to switch to light mode (6 AM)
+  THEME_CHECK_INTERVAL: 60000,   // Check theme every minute (ms)
+  DEFAULT_THEME: 'auto',         // Default theme preference
+  STORAGE_KEY: 'narada-theme',   // LocalStorage key for theme preference
+} as const;
+
 // Model Configuration
 export const MODEL_CONFIG = {
   FAST_MODEL: "gpt-4o-mini",     // Fast model for quick operations

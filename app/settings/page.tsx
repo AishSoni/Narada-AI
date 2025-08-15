@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Eye, EyeOff, Key, Settings as SettingsIcon, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { SEARCH_CONFIG } from "@/lib/config";
+import { ThemeSettings } from "@/components/theme-settings";
 
 interface EnvironmentConfig {
   // Search API Provider
@@ -437,6 +438,9 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-6">
+          {/* Theme Settings Section */}
+          <ThemeSettings />
+          
           {/* Search API Provider Section */}
           <Card>
             <CardHeader>
