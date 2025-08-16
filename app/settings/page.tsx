@@ -139,6 +139,8 @@ export default function SettingsPage() {
   });
 
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [maskedKeys, setMaskedKeys] = useState<Record<string, boolean>>({});
+  const [revealingKeys, setRevealingKeys] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showTestDialog, setShowTestDialog] = useState(false);
@@ -180,10 +182,16 @@ export default function SettingsPage() {
     // Don't fetch if no provider is selected or if required credentials are missing
     if (!config.LLM_PROVIDER) return;
     
-    // For OpenAI and OpenRouter, don't fetch without API key
-    if ((config.LLM_PROVIDER === 'openai' || config.LLM_PROVIDER === 'openrouter') && 
-        (!config.OPENAI_API_KEY || config.OPENAI_API_KEY.includes('•••') || 
-         !config.OPENROUTER_API_KEY || config.OPENROUTER_API_KEY.includes('•••'))) {
+    // For OpenAI, don't fetch without API key
+    if (config.LLM_PROVIDER === 'openai' && 
+        (!config.OPENAI_API_KEY || config.OPENAI_API_KEY.includes('•••'))) {
+      setLlmModels([]);
+      return;
+    }
+
+    // For OpenRouter, don't fetch without API key
+    if (config.LLM_PROVIDER === 'openrouter' && 
+        (!config.OPENROUTER_API_KEY || config.OPENROUTER_API_KEY.includes('•••'))) {
       setLlmModels([]);
       return;
     }
@@ -252,6 +260,7 @@ export default function SettingsPage() {
       }
     }
 
+    setIsLoadingModels(true);
     try {
       const params = new URLSearchParams({
         provider: config.EMBEDDING_PROVIDER,
@@ -277,6 +286,8 @@ export default function SettingsPage() {
         console.error('Error fetching embedding models:', error);
       }
       setEmbeddingModels([]);
+    } finally {
+      setIsLoadingModels(false);
     }
   };
 
@@ -287,6 +298,15 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json();
         setConfig(prev => ({ ...prev, ...data }));
+        
+        // Track which keys are masked (contain •••)
+        const masked: Record<string, boolean> = {};
+        Object.entries(data).forEach(([key, value]) => {
+          if (typeof value === 'string' && value.includes('•••')) {
+            masked[key] = true;
+          }
+        });
+        setMaskedKeys(masked);
       }
     } catch (error) {
       console.error('Failed to load configuration:', error);
@@ -346,48 +366,111 @@ export default function SettingsPage() {
     }
   };
 
-  const toggleShowKey = (key: string) => {
+  const toggleShowKey = async (key: string) => {
+    // If the key is currently masked and we're trying to show it, fetch the real value
+    if (maskedKeys[key] && !showKeys[key]) {
+      setRevealingKeys(prev => ({ ...prev, [key]: true }));
+      try {
+        const response = await fetch('/api/settings/reveal', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ key }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Update config with the real value and mark as unmasked
+          setConfig(prev => ({ ...prev, [key]: data.value }));
+          setMaskedKeys(prev => ({ ...prev, [key]: false }));
+        } else {
+          toast.error('Failed to reveal API key');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to reveal key:', error);
+        toast.error('Failed to reveal API key');
+        return;
+      } finally {
+        setRevealingKeys(prev => ({ ...prev, [key]: false }));
+      }
+    }
+    
     setShowKeys(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const updateConfig = (key: keyof EnvironmentConfig, value: string | number | boolean) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+    
+    // If user is updating an API key, clear the masked flag
+    if (typeof value === 'string' && key.toString().includes('API_KEY')) {
+      setMaskedKeys(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   const renderApiKeyInput = (
     key: keyof EnvironmentConfig,
     label: string,
     placeholder: string
-  ) => (
-    <div className="space-y-2">
-      <Label htmlFor={key}>{label}</Label>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Input
-            id={key}
-            type={showKeys[key] ? "text" : "password"}
-            placeholder={placeholder}
-            value={config[key]}
-            onChange={(e) => updateConfig(key, e.target.value)}
-            className="pr-10"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-            onClick={() => toggleShowKey(key)}
-          >
-            {showKeys[key] ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
-            )}
-          </Button>
+  ) => {
+    const isMasked = maskedKeys[key];
+    const isRevealing = revealingKeys[key];
+    const currentValue = typeof config[key] === "boolean" ? (config[key] ? "true" : "false") : config[key] as string | number;
+    
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={key}>{label}</Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Input
+              id={key}
+              type={showKeys[key] ? "text" : "password"}
+              placeholder={placeholder}
+              value={currentValue}
+              onChange={(e) => updateConfig(key, e.target.value)}
+              className="pr-10"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              onClick={() => toggleShowKey(key)}
+              disabled={isRevealing}
+              title={
+                isRevealing 
+                  ? "Revealing key..." 
+                  : isMasked 
+                    ? "Click to reveal stored API key" 
+                    : showKeys[key] 
+                      ? "Hide key" 
+                      : "Show key"
+              }
+            >
+              {isRevealing ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+              ) : showKeys[key] ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
+        {isMasked && !isRevealing && (
+          <p className="text-xs text-muted-foreground">
+            This API key is masked for security. Click the eye icon to reveal the stored value, or enter a new value.
+          </p>
+        )}
+        {isRevealing && (
+          <p className="text-xs text-muted-foreground">
+            Revealing stored API key...
+          </p>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -473,6 +556,12 @@ export default function SettingsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {(config.SEARCH_API_PROVIDER === 'tavily' || config.SEARCH_API_PROVIDER === 'serp') && (
+                  <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+                    <strong>Note:</strong> {config.SEARCH_API_PROVIDER === 'tavily' ? 'Tavily' : 'SERP API'} configuration is available but the search engine currently uses FireCrawl as the backend. 
+                    Full {config.SEARCH_API_PROVIDER === 'tavily' ? 'Tavily' : 'SERP API'} implementation is coming soon.
+                  </div>
+                )}
               </div>
 
               {config.SEARCH_API_PROVIDER === 'firecrawl' && 
@@ -672,10 +761,10 @@ export default function SettingsPage() {
                     <Select
                       value={config.OPENAI_EMBEDDING_MODEL}
                       onValueChange={(value: string) => updateConfig('OPENAI_EMBEDDING_MODEL', value)}
-                      disabled={embeddingModels.length === 0}
+                      disabled={isLoadingModels || embeddingModels.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a model" />
+                        <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
                       </SelectTrigger>
                       <SelectContent>
                         {embeddingModels.map((model: ModelInfo) => (
@@ -690,7 +779,7 @@ export default function SettingsPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {embeddingModels.length === 0 && (
+                    {embeddingModels.length === 0 && !isLoadingModels && (
                       <p className="text-sm text-muted-foreground">
                         Enter your API key above to load available models
                       </p>
@@ -715,9 +804,10 @@ export default function SettingsPage() {
                     <Select
                       value={config.OLLAMA_EMBEDDING_MODEL}
                       onValueChange={(value: string) => updateConfig('OLLAMA_EMBEDDING_MODEL', value)}
+                      disabled={isLoadingModels}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a model" />
+                        <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
                       </SelectTrigger>
                       <SelectContent>
                         {embeddingModels.map((model: ModelInfo) => (
@@ -732,7 +822,7 @@ export default function SettingsPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {embeddingModels.length === 0 && (
+                    {embeddingModels.length === 0 && !isLoadingModels && (
                       <p className="text-sm text-muted-foreground">
                         Check your Ollama API URL and ensure Ollama is running with embedding models
                       </p>

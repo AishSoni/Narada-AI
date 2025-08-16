@@ -1,4 +1,4 @@
-import { API_PROVIDERS, DEFAULT_MODELS, ENV_KEYS } from './config';
+import { API_PROVIDERS, DEFAULT_MODELS } from './config';
 
 export interface AppConfig {
   // Search Configuration

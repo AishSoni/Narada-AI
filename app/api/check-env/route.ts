@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
+import { getAppConfig } from '@/lib/app-config';
 
 export async function GET() {
+  const appConfig = getAppConfig();
+  
   const environmentStatus = {
     // Search API Keys
     FIRECRAWL_API_KEY: !!process.env.FIRECRAWL_API_KEY,
@@ -13,13 +16,23 @@ export async function GET() {
     OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
     
     // Configuration
-    SEARCH_API_PROVIDER: process.env.SEARCH_API_PROVIDER || 'firecrawl',
-    LLM_PROVIDER: process.env.LLM_PROVIDER || 'openai',
-    EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER || 'openai',
+    SEARCH_API_PROVIDER: appConfig.searchProvider,
+    LLM_PROVIDER: appConfig.llmProvider,
+    EMBEDDING_PROVIDER: appConfig.embeddingProvider,
     
     // URLs
     OLLAMA_API_URL: process.env.OLLAMA_API_URL || 'http://localhost:11434',
     OLLAMA_EMBEDDING_URL: process.env.OLLAMA_EMBEDDING_URL || 'http://localhost:11434',
+    
+    // Current search provider has valid API key
+    HAS_SEARCH_API_KEY: !!appConfig.searchApiKey,
+    
+    // Provider-specific key status for detailed feedback
+    SEARCH_PROVIDER_DETAILS: {
+      provider: appConfig.searchProvider,
+      hasKey: !!appConfig.searchApiKey,
+      keyRequired: true // All search providers currently require keys
+    }
   };
 
   return NextResponse.json({ environmentStatus });

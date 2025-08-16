@@ -23,13 +23,17 @@ async function getOpenAIEmbeddingModels(apiKey: string): Promise<EmbeddingModelI
     });
 
     if (!response.ok) {
+      // For authentication errors, don't return fallback models
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Authentication failed: ${response.status}`);
+      }
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
     
     // Filter to only include embedding models
-    return data.data
+    const embeddingModels = data.data
       .filter((model: any) => model.id.includes('embedding'))
       .map((model: any) => ({
         id: model.id,
@@ -40,13 +44,34 @@ async function getOpenAIEmbeddingModels(apiKey: string): Promise<EmbeddingModelI
                    model.id.includes('ada-002') ? 1536 : undefined
       }))
       .sort((a: any, b: any) => b.created - a.created);
+
+    // If no embedding models found in API response, return fallback models
+    if (embeddingModels.length === 0) {
+      return [
+        { id: 'text-embedding-3-small', name: 'text-embedding-3-small', description: 'Most cost-effective', dimensions: 1536 },
+        { id: 'text-embedding-3-large', name: 'text-embedding-3-large', description: 'Higher performance', dimensions: 3072 },
+        { id: 'text-embedding-ada-002', name: 'text-embedding-ada-002', description: 'Legacy model', dimensions: 1536 },
+      ];
+    }
+
+    return embeddingModels;
   } catch (error) {
-    // Return fallback models if API fails
-    return [
-      { id: 'text-embedding-3-small', name: 'text-embedding-3-small', description: 'Most cost-effective', dimensions: 1536 },
-      { id: 'text-embedding-3-large', name: 'text-embedding-3-large', description: 'Higher performance', dimensions: 3072 },
-      { id: 'text-embedding-ada-002', name: 'text-embedding-ada-002', description: 'Legacy model', dimensions: 1536 },
-    ];
+    // Don't return fallback models for authentication errors
+    if (error instanceof Error && error.message.includes('Authentication failed')) {
+      throw error;
+    }
+    
+    // Only return fallback models for network/timeout errors
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch'))) {
+      return [
+        { id: 'text-embedding-3-small', name: 'text-embedding-3-small', description: 'Most cost-effective (fallback)', dimensions: 1536 },
+        { id: 'text-embedding-3-large', name: 'text-embedding-3-large', description: 'Higher performance (fallback)', dimensions: 3072 },
+        { id: 'text-embedding-ada-002', name: 'text-embedding-ada-002', description: 'Legacy model (fallback)', dimensions: 1536 },
+      ];
+    }
+    
+    // For other errors, rethrow
+    throw error;
   }
 }
 
@@ -57,13 +82,7 @@ async function getOllamaEmbeddingModels(apiUrl: string): Promise<EmbeddingModelI
     try {
       validUrl = new URL(apiUrl);
     } catch {
-      // Return fallback models for invalid URLs
-      return [
-        { id: 'nomic-embed-text', name: 'nomic-embed-text', description: 'High-quality embeddings' },
-        { id: 'mxbai-embed-large', name: 'mxbai-embed-large', description: 'Large embedding model' },
-        { id: 'all-minilm', name: 'all-minilm', description: 'Lightweight embeddings' },
-        { id: 'snowflake-arctic-embed', name: 'snowflake-arctic-embed', description: 'Snowflake embeddings' },
-      ];
+      throw new Error('Invalid URL format');
     }
 
     const response = await fetch(`${validUrl.toString()}/api/tags`, {
@@ -83,7 +102,7 @@ async function getOllamaEmbeddingModels(apiUrl: string): Promise<EmbeddingModelI
     // Filter to models that are typically used for embeddings
     const embeddingKeywords = ['embed', 'nomic', 'mxbai', 'minilm', 'arctic'];
     
-    return data.models
+    const embeddingModels = data.models
       ?.filter((model: any) => 
         embeddingKeywords.some(keyword => 
           model.name.toLowerCase().includes(keyword)
@@ -94,13 +113,35 @@ async function getOllamaEmbeddingModels(apiUrl: string): Promise<EmbeddingModelI
         name: model.name.split(':')[0],
         description: `Size: ${(model.size / 1024 / 1024 / 1024).toFixed(1)}GB, Modified: ${new Date(model.modified_at).toLocaleDateString()}`,
       })) || [];
+
+    // If no embedding models found, return fallback models
+    if (embeddingModels.length === 0) {
+      return [
+        { id: 'nomic-embed-text', name: 'nomic-embed-text', description: 'High-quality embeddings (not installed)' },
+        { id: 'mxbai-embed-large', name: 'mxbai-embed-large', description: 'Large embedding model (not installed)' },
+        { id: 'all-minilm', name: 'all-minilm', description: 'Lightweight embeddings (not installed)' },
+        { id: 'snowflake-arctic-embed', name: 'snowflake-arctic-embed', description: 'Snowflake embeddings (not installed)' },
+      ];
+    }
+
+    return embeddingModels;
   } catch (error) {
-    // Return fallback models if API fails
+    // For connection errors, don't return fallback models
+    if (error instanceof Error && (error.message.includes('fetch') || error.name === 'AbortError' || error.message.includes('API error'))) {
+      throw error;
+    }
+    
+    // For invalid URL format, also throw
+    if (error instanceof Error && error.message.includes('Invalid URL')) {
+      throw error;
+    }
+    
+    // For other unexpected errors, return fallback models
     return [
-      { id: 'nomic-embed-text', name: 'nomic-embed-text', description: 'High-quality embeddings' },
-      { id: 'mxbai-embed-large', name: 'mxbai-embed-large', description: 'Large embedding model' },
-      { id: 'all-minilm', name: 'all-minilm', description: 'Lightweight embeddings' },
-      { id: 'snowflake-arctic-embed', name: 'snowflake-arctic-embed', description: 'Snowflake embeddings' },
+      { id: 'nomic-embed-text', name: 'nomic-embed-text', description: 'High-quality embeddings (fallback)' },
+      { id: 'mxbai-embed-large', name: 'mxbai-embed-large', description: 'Large embedding model (fallback)' },
+      { id: 'all-minilm', name: 'all-minilm', description: 'Lightweight embeddings (fallback)' },
+      { id: 'snowflake-arctic-embed', name: 'snowflake-arctic-embed', description: 'Snowflake embeddings (fallback)' },
     ];
   }
 }
@@ -138,6 +179,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ models });
   } catch (error) {
     console.error('Error fetching embedding models:', error);
-    return NextResponse.json({ error: 'Failed to fetch embedding models' }, { status: 500 });
+    
+    // For authentication errors, return a specific error response
+    if (error instanceof Error && error.message.includes('Authentication failed')) {
+      return NextResponse.json({ error: 'Invalid API key', models: [] }, { status: 401 });
+    }
+    
+    // For connection errors, return empty models array
+    if (error instanceof Error && (error.message.includes('fetch') || error.message.includes('API error') || error.message.includes('Invalid URL'))) {
+      return NextResponse.json({ error: 'Connection failed', models: [] }, { status: 503 });
+    }
+    
+    return NextResponse.json({ error: 'Failed to fetch embedding models', models: [] }, { status: 500 });
   }
 }

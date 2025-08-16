@@ -139,7 +139,12 @@ function SourcesList({ sources }: { sources: Source[] }) {
                         href={source.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="font-medium text-sm text-gray-900 dark:text-gray-100 hover:text-orange-600 dark:hover:text-orange-400 line-clamp-2"
+                        className="font-medium text-sm text-gray-900 dark:text-gray-100 hover:text-orange-600 dark:hover:text-orange-400 overflow-hidden text-ellipsis"
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {source.title}
@@ -182,6 +187,21 @@ function SourcesList({ sources }: { sources: Source[] }) {
   );
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  timestamp: number;
+  messages: Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    content: string | React.ReactNode;
+    isSearch?: boolean;
+    searchResults?: string;
+  }>;
+  messageCount: number;
+  preview: string;
+}
+
 export function Chat() {
   const [messages, setMessages] = useState<Array<{
     id: string;
@@ -199,12 +219,127 @@ export function Chat() {
   const [showApiKeyModal, setShowApiKeyModal] = useState<boolean>(false);
   const [, setIsCheckingEnv] = useState<boolean>(true);
   const [pendingQuery, setPendingQuery] = useState<string>('');
+  const [currentConversationId, setCurrentConversationId] = useState<string>('');
+  const [searchProvider, setSearchProvider] = useState<string>('firecrawl');
+  const [searchProviderDisplayName, setSearchProviderDisplayName] = useState<string>('FireCrawl');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSelectSuggestion = (suggestion: string) => {
     setInput(suggestion);
     setShowSuggestions(false);
   };
+
+  // Utility functions for conversation management
+  const generateConversationTitle = (firstMessage: string): string => {
+    // Take first 60 characters of the first user message as title
+    if (firstMessage.length <= 60) return firstMessage;
+    return firstMessage.substring(0, 57) + '...';
+  };
+
+  const generateConversationPreview = (messages: Array<{
+    role: 'user' | 'assistant';
+    content: string | React.ReactNode;
+    searchResults?: string;
+  }>): string => {
+    // Find first assistant response with search results
+    const firstResponse = messages.find(msg => 
+      msg.role === 'assistant' && msg.searchResults
+    );
+    
+    if (firstResponse && firstResponse.searchResults) {
+      const preview = firstResponse.searchResults.substring(0, 150);
+      return preview.length < firstResponse.searchResults.length ? preview + '...' : preview;
+    }
+    
+    return 'Search conversation';
+  };
+
+  const saveConversation = () => {
+    if (messages.length < 2) return; // Need at least one exchange
+    
+    try {
+      const conversations = JSON.parse(localStorage.getItem('narada-conversations') || '[]');
+      const firstUserMessage = messages.find(msg => msg.role === 'user');
+      
+      if (!firstUserMessage || typeof firstUserMessage.content !== 'string') return;
+      
+      const conversation: Conversation = {
+        id: currentConversationId || Date.now().toString(),
+        title: generateConversationTitle(firstUserMessage.content),
+        timestamp: Date.now(),
+        messages: messages.map(msg => ({
+          ...msg,
+          content: typeof msg.content === 'string' ? msg.content : '[Complex content]'
+        })),
+        messageCount: messages.length,
+        preview: generateConversationPreview(messages)
+      };
+      
+      // Check if conversation already exists (update) or create new
+      const existingIndex = conversations.findIndex((conv: Conversation) => conv.id === conversation.id);
+      if (existingIndex >= 0) {
+        conversations[existingIndex] = conversation;
+      } else {
+        conversations.unshift(conversation);
+      }
+      
+      // Keep only the latest 50 conversations
+      const trimmedConversations = conversations.slice(0, 50);
+      localStorage.setItem('narada-conversations', JSON.stringify(trimmedConversations));
+      
+      if (!currentConversationId) {
+        setCurrentConversationId(conversation.id);
+      }
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
+    }
+  };
+
+  const restoreConversation = (conversation: Conversation) => {
+    setMessages(conversation.messages);
+    setCurrentConversationId(conversation.id);
+    toast.success('Conversation restored');
+  };
+
+  const clearCurrentChat = () => {
+    // Save current conversation if it has content
+    if (messages.length >= 2) {
+      saveConversation();
+    }
+    
+    // Reset chat state
+    setMessages([]);
+    setCurrentConversationId('');
+    setInput('');
+    setIsSearching(false);
+    setShowSuggestions(false);
+    setHasShownSuggestions(false);
+  };
+
+  // Check for conversation restoration on mount
+  useEffect(() => {
+    const restoreData = localStorage.getItem('narada-restore-conversation');
+    if (restoreData) {
+      try {
+        const conversation = JSON.parse(restoreData);
+        restoreConversation(conversation);
+        localStorage.removeItem('narada-restore-conversation');
+      } catch (error) {
+        console.error('Failed to restore conversation:', error);
+      }
+    }
+  }, []);
+
+  // Save conversation whenever messages change (with debouncing)
+  useEffect(() => {
+    if (messages.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        saveConversation();
+      }, 1000); // Save after 1 second of no changes
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, currentConversationId]);
 
   // Check for environment variables on mount
   useEffect(() => {
@@ -215,9 +350,29 @@ export function Chat() {
         const data = await response.json();
         
         if (data.environmentStatus) {
-          // Only check for Firecrawl API key since we can pass it from frontend
-          // OpenAI and Anthropic keys must be in environment
-          setHasApiKey(data.environmentStatus.FIRECRAWL_API_KEY);
+          // Set search provider info
+          setSearchProvider(data.environmentStatus.SEARCH_API_PROVIDER);
+          
+          // Set provider display name
+          const providerDetails = data.environmentStatus.SEARCH_PROVIDER_DETAILS;
+          if (providerDetails) {
+            switch (providerDetails.provider) {
+              case 'firecrawl':
+                setSearchProviderDisplayName('FireCrawl');
+                break;
+              case 'tavily':
+                setSearchProviderDisplayName('Tavily');
+                break;
+              case 'serp':
+                setSearchProviderDisplayName('SERP API');
+                break;
+              default:
+                setSearchProviderDisplayName(providerDetails.provider);
+            }
+          }
+          
+          // Check if current search provider has a valid API key
+          setHasApiKey(data.environmentStatus.HAS_SEARCH_API_KEY);
         }
       } catch (error) {
         console.error('Failed to check environment:', error);
@@ -450,8 +605,8 @@ export function Chat() {
     const userMessage = input;
     setInput('');
 
-    // Check if we have API key
-    if (!hasApiKey) {
+    // Check if we have API key (only block for FireCrawl since others aren't fully implemented yet)
+    if (!hasApiKey && searchProvider === 'firecrawl') {
       // Store the query and show modal
       setPendingQuery(userMessage);
       setShowApiKeyModal(true);
@@ -465,6 +620,11 @@ export function Chat() {
         isSearch: true
       }]);
       return;
+    }
+
+    // For non-FireCrawl providers without API keys, show a warning but continue
+    if (!hasApiKey && searchProvider !== 'firecrawl') {
+      toast.warning(`${searchProviderDisplayName} is not fully configured. Using FireCrawl as fallback.`);
     }
 
     // Add user message
@@ -536,7 +696,7 @@ export function Chat() {
                             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
-                            <span className="line-clamp-1">{suggestion}</span>
+                            <span className="overflow-hidden text-ellipsis whitespace-nowrap">{suggestion}</span>
                           </div>
                         </button>
                       ))}
@@ -577,8 +737,22 @@ export function Chat() {
 
           {/* Input */}
           <div className="bg-white dark:bg-zinc-950 px-4 sm:px-6 lg:px-8 py-6">
-            <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          <div className="relative">
+            <div className="max-w-4xl mx-auto">
+              {/* New Chat Button */}
+              {messages.length > 0 && (
+                <div className="flex justify-center mb-4">
+                  <Button
+                    variant="outline"
+                    onClick={clearCurrentChat}
+                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  >
+                    Start New Chat
+                  </Button>
+                </div>
+              )}
+              
+              <form onSubmit={handleSubmit}>
+                <div className="relative">
             <input
               type="text"
               value={input}
@@ -639,16 +813,17 @@ export function Chat() {
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        <span className="line-clamp-1">{suggestion}</span>
+                        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{suggestion}</span>
                       </div>
                     </button>
                   ))}
                 </div>
               </div>
             )}
+                </div>
+              </form>
+            </div>
           </div>
-        </form>
-      </div>
         </>
       )}
 
@@ -656,34 +831,78 @@ export function Chat() {
       <Dialog open={showApiKeyModal} onOpenChange={setShowApiKeyModal}>
         <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
           <DialogHeader>
-            <DialogTitle>Firecrawl API Key Required</DialogTitle>
+            <DialogTitle>{searchProviderDisplayName} API Key Required</DialogTitle>
             <DialogDescription>
-              To use Firesearch, you need a Firecrawl API key. You can get one for free.
+              {searchProvider === 'firecrawl' ? (
+                <>To use Firesearch, you need a Firecrawl API key. You can get one for free.</>
+              ) : searchProvider === 'tavily' ? (
+                <>To search the web, you need a Tavily API key. Please set the TAVILY_API_KEY environment variable.</>
+              ) : searchProvider === 'serp' ? (
+                <>To search Google, you need a SERP API key. Please set the SERP_API_KEY environment variable.</>
+              ) : (
+                <>To search the web, you need a {searchProviderDisplayName} API key.</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Button
-                onClick={() => window.open('https://www.firecrawl.dev/app/api-keys', '_blank')}
-                className="w-full"
-                variant="code"
-              >
-                Get your free API key from Firecrawl →
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="apiKey" className="text-sm font-medium">
-                Enter your API key
-              </label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={firecrawlApiKey}
-                onChange={(e) => setFirecrawlApiKey(e.target.value)}
-                placeholder="fc-..."
-                className="w-full"
-              />
-            </div>
+            {searchProvider === 'firecrawl' ? (
+              <>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => window.open('https://www.firecrawl.dev/app/api-keys', '_blank')}
+                    className="w-full"
+                    variant="code"
+                  >
+                    Get your free API key from Firecrawl →
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="apiKey" className="text-sm font-medium">
+                    Enter your API key
+                  </label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    value={firecrawlApiKey}
+                    onChange={(e) => setFirecrawlApiKey(e.target.value)}
+                    placeholder="fc-..."
+                    className="w-full"
+                  />
+                </div>
+              </>
+            ) : searchProvider === 'tavily' ? (
+              <div className="space-y-2">
+                <Button
+                  onClick={() => window.open('https://tavily.com/', '_blank')}
+                  className="w-full"
+                  variant="code"
+                >
+                  Get your API key from Tavily →
+                </Button>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Set the <code>TAVILY_API_KEY</code> environment variable and restart the application.
+                </p>
+              </div>
+            ) : searchProvider === 'serp' ? (
+              <div className="space-y-2">
+                <Button
+                  onClick={() => window.open('https://serpapi.com/', '_blank')}
+                  className="w-full"
+                  variant="code"
+                >
+                  Get your API key from SERP API →
+                </Button>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Set the <code>SERP_API_KEY</code> environment variable and restart the application.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Please configure the API key for {searchProviderDisplayName} in your environment variables.
+                </p>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 justify-end">
             <Button
@@ -692,13 +911,25 @@ export function Chat() {
             >
               Cancel
             </Button>
-            <Button 
-              variant="orange"
-              onClick={saveApiKey}
-              disabled={!firecrawlApiKey.trim()}
-            >
-              Save and Continue
-            </Button>
+            {searchProvider === 'firecrawl' ? (
+              <Button 
+                variant="orange"
+                onClick={saveApiKey}
+                disabled={!firecrawlApiKey.trim()}
+              >
+                Save and Continue
+              </Button>
+            ) : (
+              <Button 
+                variant="orange"
+                onClick={() => {
+                  setShowApiKeyModal(false);
+                  toast.info('Please set the required environment variable and restart the application.');
+                }}
+              >
+                Close
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
