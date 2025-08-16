@@ -45,6 +45,8 @@ interface EnvironmentConfig {
   // Embedding Provider
   EMBEDDING_PROVIDER: string;
   OPENAI_EMBEDDING_MODEL: string;
+  COHERE_API_KEY: string;
+  COHERE_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_URL: string;
   
@@ -86,6 +88,7 @@ const LLM_PROVIDERS = [
 
 const EMBEDDING_PROVIDERS = [
   { value: 'openai', label: 'OpenAI', description: 'text-embedding-3-small/large' },
+  { value: 'cohere', label: 'Cohere', description: 'embed-english-v3.0/multilingual-v3.0' },
   { value: 'ollama', label: 'Ollama', description: 'Local embedding models' }
 ];
 
@@ -114,6 +117,8 @@ export default function SettingsPage() {
     OPENROUTER_LLM_MODEL: 'openai/gpt-4o-mini',
     EMBEDDING_PROVIDER: 'openai',
     OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
+    COHERE_API_KEY: '',
+    COHERE_EMBEDDING_MODEL: 'embed-english-v3.0',
     OLLAMA_EMBEDDING_MODEL: 'nomic-embed-text',
     OLLAMA_EMBEDDING_URL: 'http://localhost:11434',
     VECTOR_DB_PROVIDER: 'qdrant',
@@ -176,7 +181,7 @@ export default function SettingsPage() {
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [config.EMBEDDING_PROVIDER, config.OPENAI_API_KEY, config.OLLAMA_EMBEDDING_URL]);
+  }, [config.EMBEDDING_PROVIDER, config.OPENAI_API_KEY, config.COHERE_API_KEY, config.OLLAMA_EMBEDDING_URL]);
 
   const fetchLLMModels = async () => {
     // Don't fetch if no provider is selected or if required credentials are missing
@@ -250,6 +255,13 @@ export default function SettingsPage() {
       return;
     }
 
+    // For Cohere, don't fetch without API key
+    if (config.EMBEDDING_PROVIDER === 'cohere' && 
+        (!config.COHERE_API_KEY || config.COHERE_API_KEY.includes('•••'))) {
+      setEmbeddingModels([]);
+      return;
+    }
+
     // For Ollama, don't fetch with invalid URLs
     if (config.EMBEDDING_PROVIDER === 'ollama' && config.OLLAMA_EMBEDDING_URL) {
       try {
@@ -268,6 +280,8 @@ export default function SettingsPage() {
 
       if (config.EMBEDDING_PROVIDER === 'openai' && config.OPENAI_API_KEY && !config.OPENAI_API_KEY.includes('•••')) {
         params.append('apiKey', config.OPENAI_API_KEY);
+      } else if (config.EMBEDDING_PROVIDER === 'cohere' && config.COHERE_API_KEY && !config.COHERE_API_KEY.includes('•••')) {
+        params.append('apiKey', config.COHERE_API_KEY);
       } else if (config.EMBEDDING_PROVIDER === 'ollama' && config.OLLAMA_EMBEDDING_URL) {
         params.append('apiUrl', config.OLLAMA_EMBEDDING_URL);
       }
@@ -755,6 +769,41 @@ export default function SettingsPage() {
                     <Select
                       value={config.OPENAI_EMBEDDING_MODEL}
                       onValueChange={(value: string) => updateConfig('OPENAI_EMBEDDING_MODEL', value)}
+                      disabled={isLoadingModels || embeddingModels.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {embeddingModels.map((model: ModelInfo) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            <div>
+                              <div className="font-medium">{model.name}</div>
+                              {model.description && (
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {embeddingModels.length === 0 && !isLoadingModels && (
+                      <p className="text-sm text-muted-foreground">
+                        Enter your API key above to load available models
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {config.EMBEDDING_PROVIDER === 'cohere' && (
+                <>
+                  {renderApiKeyInput('COHERE_API_KEY', 'Cohere API Key', 'your-api-key')}
+                  <div className="space-y-2">
+                    <Label>Model</Label>
+                    <Select
+                      value={config.COHERE_EMBEDDING_MODEL}
+                      onValueChange={(value: string) => updateConfig('COHERE_EMBEDDING_MODEL', value)}
                       disabled={isLoadingModels || embeddingModels.length === 0}
                     >
                       <SelectTrigger>

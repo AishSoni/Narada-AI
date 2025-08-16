@@ -63,7 +63,8 @@ export const API_PROVIDERS = {
   },
   EMBEDDING: {
     OPENAI: 'openai',
-    OLLAMA: 'ollama'
+    OLLAMA: 'ollama',
+    COHERE: 'cohere'
   },
   VECTOR_DB: {
     QDRANT: 'qdrant'
@@ -74,6 +75,7 @@ export const API_PROVIDERS = {
 export const DEFAULT_MODELS = {
   OPENAI_EMBEDDING: 'text-embedding-3-small',
   OLLAMA_EMBEDDING: 'nomic-embed-text',
+  COHERE_EMBEDDING: 'embed-english-v3.0',
   OPENAI_LLM: 'gpt-4o-mini',
   OLLAMA_LLM: 'llama3.2',
   OPENROUTER_LLM: 'openai/gpt-4o-mini',
@@ -116,6 +118,8 @@ export const ENV_KEYS = {
   OPENAI_EMBEDDING_MODEL: 'OPENAI_EMBEDDING_MODEL',
   OLLAMA_EMBEDDING_MODEL: 'OLLAMA_EMBEDDING_MODEL',
   OLLAMA_EMBEDDING_URL: 'OLLAMA_EMBEDDING_URL',
+  COHERE_API_KEY: 'COHERE_API_KEY',
+  COHERE_EMBEDDING_MODEL: 'COHERE_EMBEDDING_MODEL',
   
   // Vector Database Provider
   VECTOR_DB_PROVIDER: 'VECTOR_DB_PROVIDER',

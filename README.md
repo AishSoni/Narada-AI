@@ -127,7 +127,7 @@ Narada AI offers two ways to configure your API providers and settings:
 3. Configure your API providers:
    - Choose your search provider (FireCrawl, Tavily, or SERP)
    - Choose your LLM provider (OpenAI, Ollama, or OpenRouter)  
-   - Choose your embedding provider (OpenAI or Ollama)
+   - Choose your embedding provider (OpenAI, Cohere, or Ollama)
 4. Enter your API keys for the selected providers
 5. Test your configuration using the "Test Configuration" button
 6. Save your settings
@@ -154,6 +154,11 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
 # Embedding Provider
 EMBEDDING_PROVIDER=openai
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+
+# Alternative: Cohere Embeddings
+# EMBEDDING_PROVIDER=cohere
+# COHERE_API_KEY=your-cohere-api-key-here
+# COHERE_EMBEDDING_MODEL=embed-english-v3.0
 ```
 
 ### API Provider Setup
@@ -179,7 +184,19 @@ ollama pull llama3.1          # For text generation
 ollama pull nomic-embed-text  # For embeddings
 ```
 
-### 4. Qdrant Setup
+### 4. Cohere API Setup (Optional)
+
+1. Sign up at [cohere.ai](https://cohere.ai)
+2. Get your API key from the dashboard
+3. Add it to your environment variables or settings page
+
+Available Cohere embedding models:
+- `embed-english-v3.0` (1024 dimensions) - Best performance for English
+- `embed-english-light-v3.0` (384 dimensions) - Fast and efficient for English
+- `embed-multilingual-v3.0` (1024 dimensions) - Supports 100+ languages
+- `embed-english-v2.0` (4096 dimensions) - Previous generation model
+
+### 5. Qdrant Setup
 
 Qdrant is automatically configured when using Docker Compose. For manual setup:
 
@@ -189,7 +206,7 @@ docker run -p 6333:6333 -p 6334:6334 \
   qdrant/qdrant
 ```
 
-### 5. MCP Servers (Optional)
+### 6. MCP Servers (Optional)
 
 Add MCP servers through the Settings page to extend the agent's capabilities with custom tools.
 

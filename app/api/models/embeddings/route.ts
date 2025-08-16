@@ -146,6 +146,74 @@ async function getOllamaEmbeddingModels(apiUrl: string): Promise<EmbeddingModelI
   }
 }
 
+async function getCohereEmbeddingModels(apiKey: string): Promise<EmbeddingModelInfo[]> {
+  try {
+    // Validate API key format
+    if (!apiKey || apiKey.length < 10) {
+      throw new Error('Invalid API key format');
+    }
+
+    const response = await fetch('https://api.cohere.ai/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
+
+    if (!response.ok) {
+      // For authentication errors, don't return fallback models
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Authentication failed: ${response.status}`);
+      }
+      throw new Error(`Cohere API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Filter to only include embedding models
+    const embeddingModels = data.models
+      ?.filter((model: any) => model.endpoints?.includes('embed') || model.name.includes('embed'))
+      .map((model: any) => ({
+        id: model.name,
+        name: model.name,
+        description: model.description || `Context length: ${model.context_length || 'N/A'}`,
+        dimensions: model.embed_dimension || undefined
+      }))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name)) || [];
+
+    // If no embedding models found in API response, return fallback models
+    if (embeddingModels.length === 0) {
+      return [
+        { id: 'embed-english-v3.0', name: 'embed-english-v3.0', description: 'Best performance for English', dimensions: 1024 },
+        { id: 'embed-english-light-v3.0', name: 'embed-english-light-v3.0', description: 'Fast and efficient for English', dimensions: 384 },
+        { id: 'embed-multilingual-v3.0', name: 'embed-multilingual-v3.0', description: 'Supports 100+ languages', dimensions: 1024 },
+        { id: 'embed-english-v2.0', name: 'embed-english-v2.0', description: 'Previous generation English model', dimensions: 4096 },
+      ];
+    }
+
+    return embeddingModels;
+  } catch (error) {
+    // Don't return fallback models for authentication errors
+    if (error instanceof Error && error.message.includes('Authentication failed')) {
+      throw error;
+    }
+    
+    // Only return fallback models for network/timeout errors
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch'))) {
+      return [
+        { id: 'embed-english-v3.0', name: 'embed-english-v3.0', description: 'Best performance for English (fallback)', dimensions: 1024 },
+        { id: 'embed-english-light-v3.0', name: 'embed-english-light-v3.0', description: 'Fast and efficient for English (fallback)', dimensions: 384 },
+        { id: 'embed-multilingual-v3.0', name: 'embed-multilingual-v3.0', description: 'Supports 100+ languages (fallback)', dimensions: 1024 },
+        { id: 'embed-english-v2.0', name: 'embed-english-v2.0', description: 'Previous generation English model (fallback)', dimensions: 4096 },
+      ];
+    }
+    
+    // For other errors, rethrow
+    throw error;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const provider = searchParams.get('provider');
@@ -170,6 +238,13 @@ export async function GET(request: NextRequest) {
       case 'ollama':
         const ollamaUrl = apiUrl || 'http://localhost:11434';
         models = await getOllamaEmbeddingModels(ollamaUrl);
+        break;
+
+      case 'cohere':
+        if (!apiKey) {
+          return NextResponse.json({ error: 'API key is required for Cohere' }, { status: 400 });
+        }
+        models = await getCohereEmbeddingModels(apiKey);
         break;
 
       default:

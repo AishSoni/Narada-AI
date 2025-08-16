@@ -15,6 +15,7 @@ export async function GET() {
     OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
     ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
     OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
+    COHERE_API_KEY: !!process.env.COHERE_API_KEY,
     
     // Configuration
     SEARCH_API_PROVIDER: appConfig.searchProvider,

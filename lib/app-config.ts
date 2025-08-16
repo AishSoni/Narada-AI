@@ -72,6 +72,10 @@ export function getAppConfig(): AppConfig {
       embeddingApiUrl = process.env.OLLAMA_EMBEDDING_URL || 'http://localhost:11434';
       embeddingModel = process.env.OLLAMA_EMBEDDING_MODEL || DEFAULT_MODELS.OLLAMA_EMBEDDING;
       break;
+    case API_PROVIDERS.EMBEDDING.COHERE:
+      embeddingApiKey = process.env.COHERE_API_KEY || '';
+      embeddingModel = process.env.COHERE_EMBEDDING_MODEL || DEFAULT_MODELS.COHERE_EMBEDDING;
+      break;
   }
   
   return {

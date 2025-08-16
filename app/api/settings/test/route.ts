@@ -14,6 +14,8 @@ interface TestConfig {
   OPENROUTER_LLM_MODEL: string;
   EMBEDDING_PROVIDER: string;
   OPENAI_EMBEDDING_MODEL: string;
+  COHERE_API_KEY: string;
+  COHERE_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_URL: string;
 }
@@ -119,6 +121,23 @@ async function testOpenRouterAPI(apiKey: string): Promise<boolean> {
   }
 }
 
+async function testCohereAPI(apiKey: string): Promise<boolean> {
+  try {
+    if (!apiKey || apiKey.includes('•••')) return false;
+    
+    const response = await fetch('https://api.cohere.ai/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const config: TestConfig = await request.json();
@@ -145,6 +164,8 @@ export async function POST(request: NextRequest) {
     // Test Embedding Provider
     if (config.EMBEDDING_PROVIDER === 'openai' && config.OPENAI_API_KEY) {
       results['OpenAI Embeddings'] = await testOpenAIAPI(config.OPENAI_API_KEY);
+    } else if (config.EMBEDDING_PROVIDER === 'cohere' && config.COHERE_API_KEY) {
+      results['Cohere Embeddings'] = await testCohereAPI(config.COHERE_API_KEY);
     } else if (config.EMBEDDING_PROVIDER === 'ollama' && config.OLLAMA_EMBEDDING_URL) {
       results['Ollama Embeddings'] = await testOllamaAPI(config.OLLAMA_EMBEDDING_URL);
     }
