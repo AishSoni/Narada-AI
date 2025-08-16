@@ -556,12 +556,6 @@ export default function SettingsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {(config.SEARCH_API_PROVIDER === 'tavily' || config.SEARCH_API_PROVIDER === 'serp') && (
-                  <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
-                    <strong>Note:</strong> {config.SEARCH_API_PROVIDER === 'tavily' ? 'Tavily' : 'SERP API'} configuration is available but the search engine currently uses FireCrawl as the backend. 
-                    Full {config.SEARCH_API_PROVIDER === 'tavily' ? 'Tavily' : 'SERP API'} implementation is coming soon.
-                  </div>
-                )}
               </div>
 
               {config.SEARCH_API_PROVIDER === 'firecrawl' && 

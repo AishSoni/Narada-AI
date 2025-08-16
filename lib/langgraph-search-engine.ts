@@ -1,9 +1,9 @@
 import { StateGraph, END, START, Annotation, MemorySaver } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { FirecrawlClient } from './firecrawl';
 import { ContextProcessor } from './context-processor';
-import { SEARCH_CONFIG, MODEL_CONFIG } from './config';
+import { SEARCH_CONFIG } from './config';
+import type { SearchClientInterface } from './unified-search-client';
+import { LangGraphLLMClient, type LLMMessage } from './langgraph-llm-client';
 
 // Event types remain the same for frontend compatibility
 export type SearchPhase = 
@@ -161,35 +161,18 @@ interface GraphConfig {
 }
 
 export class LangGraphSearchEngine {
-  private firecrawl: FirecrawlClient;
+  private searchClient: SearchClientInterface;
   private contextProcessor: ContextProcessor;
   private graph: ReturnType<typeof this.buildGraph>;
-  private llm: ChatOpenAI;
-  private streamingLlm: ChatOpenAI;
+  private llmClient: LangGraphLLMClient;
   private checkpointer?: MemorySaver;
 
-  constructor(firecrawl: FirecrawlClient, options?: { enableCheckpointing?: boolean }) {
-    this.firecrawl = firecrawl;
+  constructor(searchClient: SearchClientInterface, options?: { enableCheckpointing?: boolean }) {
+    this.searchClient = searchClient;
     this.contextProcessor = new ContextProcessor();
     
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is not set');
-    }
-    
-    // Initialize LangChain models
-    this.llm = new ChatOpenAI({
-      modelName: MODEL_CONFIG.FAST_MODEL,
-      temperature: MODEL_CONFIG.TEMPERATURE,
-      openAIApiKey: apiKey,
-    });
-    
-    this.streamingLlm = new ChatOpenAI({
-      modelName: MODEL_CONFIG.QUALITY_MODEL,
-      temperature: MODEL_CONFIG.TEMPERATURE,
-      streaming: true,
-      openAIApiKey: apiKey,
-    });
+    // Initialize LangGraph-native LLM client
+    this.llmClient = new LangGraphLLMClient();
 
     // Enable checkpointing if requested
     if (options?.enableCheckpointing) {
@@ -197,6 +180,17 @@ export class LangGraphSearchEngine {
     }
     
     this.graph = this.buildGraph();
+  }
+
+  // Helper method to convert LangChain messages to LLM messages
+  private convertMessagesToLLM(messages: (HumanMessage | SystemMessage)[]): LLMMessage[] {
+    return messages.map((msg) => {
+      if (msg instanceof HumanMessage) {
+        return { role: 'user' as const, content: msg.content.toString() };
+      } else {
+        return { role: 'system' as const, content: msg.content.toString() };
+      }
+    });
   }
 
   getInitialSteps(): SearchStep[] {
@@ -217,7 +211,7 @@ export class LangGraphSearchEngine {
     const summarizeContent = this.summarizeContent.bind(this);
     const generateStreamingAnswer = this.generateStreamingAnswer.bind(this);
     const generateFollowUpQuestions = this.generateFollowUpQuestions.bind(this);
-    const firecrawl = this.firecrawl;
+    const searchClient = this.searchClient;
     const contextProcessor = this.contextProcessor;
     
     const workflow = new StateGraph(SearchStateAnnotation)
@@ -378,7 +372,7 @@ export class LangGraphSearchEngine {
         }
         
         try {
-          const results = await firecrawl.search(searchQuery, {
+          const results = await searchClient.search(searchQuery, {
             limit: SEARCH_CONFIG.MAX_SOURCES_PER_SEARCH,
             scrapeOptions: {
               formats: ['markdown']
@@ -512,7 +506,7 @@ export class LangGraphSearchEngine {
           }
           
           try {
-            const scraped = await firecrawl.scrapeUrl(source.url, SEARCH_CONFIG.SCRAPE_TIMEOUT);
+            const scraped = await searchClient.scrapeUrl(source.url, SEARCH_CONFIG.SCRAPE_TIMEOUT);
             if (scraped.success && scraped.markdown) {
               const enrichedSource = {
                 ...source,
@@ -976,8 +970,8 @@ Keep it natural and conversational, showing you truly understand their request.`
       new HumanMessage(`Query: "${query}"${contextPrompt}`)
     ];
     
-    const response = await this.llm.invoke(messages);
-    return response.content.toString();
+    const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
+    return response.content;
   }
 
   private async checkAnswersInSources(
@@ -1056,8 +1050,8 @@ ${sources.slice(0, SEARCH_CONFIG.MAX_SOURCES_TO_CHECK).map(s => {
     ];
 
     try {
-      const response = await this.llm.invoke(messages);
-      let content = response.content.toString();
+      const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
+      let content = response.content;
       
       // Strip markdown code blocks if present
       content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
@@ -1130,8 +1124,8 @@ Return ONLY a JSON array of {question, searchQuery} objects.`),
     ];
 
     try {
-      const response = await this.llm.invoke(messages);
-      return JSON.parse(response.content.toString());
+      const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
+      return JSON.parse(response.content);
     } catch {
       // Fallback: treat as single query
       return [{ question: query, searchQuery: query }];
@@ -1193,18 +1187,18 @@ Return one alternative search query per unanswered question, one per line.`),
     ];
 
     try {
-      const response = await this.llm.invoke(messages);
-      const result = response.content.toString();
+      const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
+      const result = response.content;
       
       const queries = result
         .split('\n')
-        .map(q => q.trim())
-        .map(q => q.replace(/^["']|["']$/g, ''))
-        .map(q => q.replace(/^\d+\.\s*/, ''))
-        .map(q => q.replace(/^[-*#]\s*/, ''))
-        .filter(q => q.length > 0)
-        .filter(q => !q.match(/^```/))
-        .filter(q => q.length > 3);
+        .map((q: string) => q.trim())
+        .map((q: string) => q.replace(/^["']|["']$/g, ''))
+        .map((q: string) => q.replace(/^\d+\.\s*/, ''))
+        .map((q: string) => q.replace(/^[-*#]\s*/, ''))
+        .filter((q: string) => q.length > 0)
+        .filter((q: string) => !q.match(/^```/))
+        .filter((q: string) => q.length > 3);
       
       return queries.slice(0, SEARCH_CONFIG.MAX_SEARCH_QUERIES);
     } catch {
@@ -1245,8 +1239,8 @@ Instructions:
         new HumanMessage(`Query: "${query}"\n\nContent: ${content.slice(0, 2000)}`)
       ];
       
-      const response = await this.llm.invoke(messages);
-      return response.content.toString().trim();
+      const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
+      return response.content.trim();
     } catch {
       return '';
     }
@@ -1283,19 +1277,14 @@ Answer the user's question based on the provided sources. Provide a clear, compr
     let fullText = '';
     
     try {
-      const stream = await this.streamingLlm.stream(messages);
-      
-      for await (const chunk of stream) {
-        const content = chunk.content;
-        if (typeof content === 'string') {
-          fullText += content;
-          onChunk(content);
-        }
-      }
+      await this.llmClient.stream(this.convertMessagesToLLM(messages), (chunk: string) => {
+        fullText += chunk;
+        onChunk(chunk);
+      });
     } catch {
       // Fallback to non-streaming if streaming fails
-      const response = await this.llm.invoke(messages);
-      fullText = response.content.toString();
+      const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
+      fullText = response.content;
       onChunk(fullText);
     }
     
@@ -1343,11 +1332,11 @@ Examples of good follow-up questions:
         new HumanMessage(`Original query: "${originalQuery}"\n\nAnswer summary: ${answer.length > 1000 ? answer.slice(0, 1000) + '...' : answer}${contextPrompt}`)
       ];
       
-      const response = await this.llm.invoke(messages);
-      const questions = response.content.toString()
+      const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
+      const questions = response.content
         .split('\n')
-        .map(q => q.trim())
-        .filter(q => q.length > 0 && q.length < 80)
+        .map((q: string) => q.trim())
+        .filter((q: string) => q.length > 0 && q.length < 80)
         .slice(0, 3);
       
       return questions.length > 0 ? questions : [];

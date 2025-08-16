@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAppConfig } from '@/lib/app-config';
+import { LangGraphLLMClient } from '@/lib/langgraph-llm-client';
 
 export async function GET() {
   const appConfig = getAppConfig();
@@ -27,11 +28,22 @@ export async function GET() {
     // Current search provider has valid API key
     HAS_SEARCH_API_KEY: !!appConfig.searchApiKey,
     
+    // Current LLM provider is properly configured
+    HAS_LLM_CONFIG: LangGraphLLMClient.isProviderConfigured(),
+    
     // Provider-specific key status for detailed feedback
     SEARCH_PROVIDER_DETAILS: {
       provider: appConfig.searchProvider,
       hasKey: !!appConfig.searchApiKey,
-      keyRequired: true // All search providers currently require keys
+      keyRequired: true
+    },
+    
+    LLM_PROVIDER_DETAILS: {
+      provider: appConfig.llmProvider,
+      hasConfig: LangGraphLLMClient.isProviderConfigured(),
+      apiKey: appConfig.llmApiKey ? '••••••••' : '',
+      apiUrl: appConfig.llmApiUrl || '',
+      model: appConfig.llmModel
     }
   };
 

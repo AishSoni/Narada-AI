@@ -222,6 +222,9 @@ export function Chat() {
   const [currentConversationId, setCurrentConversationId] = useState<string>('');
   const [searchProvider, setSearchProvider] = useState<string>('firecrawl');
   const [searchProviderDisplayName, setSearchProviderDisplayName] = useState<string>('FireCrawl');
+  const [, setLlmProvider] = useState<string>('openai');
+  const [llmProviderDisplayName, setLlmProviderDisplayName] = useState<string>('OpenAI');
+  const [hasLlmConfig, setHasLlmConfig] = useState<boolean>(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSelectSuggestion = (suggestion: string) => {
@@ -353,7 +356,10 @@ export function Chat() {
           // Set search provider info
           setSearchProvider(data.environmentStatus.SEARCH_API_PROVIDER);
           
-          // Set provider display name
+          // Set LLM provider info
+          setLlmProvider(data.environmentStatus.LLM_PROVIDER);
+          
+          // Set provider display names
           const providerDetails = data.environmentStatus.SEARCH_PROVIDER_DETAILS;
           if (providerDetails) {
             switch (providerDetails.provider) {
@@ -371,8 +377,26 @@ export function Chat() {
             }
           }
           
-          // Check if current search provider has a valid API key
+          const llmDetails = data.environmentStatus.LLM_PROVIDER_DETAILS;
+          if (llmDetails) {
+            switch (llmDetails.provider) {
+              case 'openai':
+                setLlmProviderDisplayName('OpenAI');
+                break;
+              case 'ollama':
+                setLlmProviderDisplayName('Ollama');
+                break;
+              case 'openrouter':
+                setLlmProviderDisplayName('OpenRouter');
+                break;
+              default:
+                setLlmProviderDisplayName(llmDetails.provider);
+            }
+          }
+          
+          // Check if current providers are properly configured
           setHasApiKey(data.environmentStatus.HAS_SEARCH_API_KEY);
+          setHasLlmConfig(data.environmentStatus.HAS_LLM_CONFIG);
         }
       } catch (error) {
         console.error('Failed to check environment:', error);
@@ -580,13 +604,17 @@ export function Chat() {
           <div className="p-4 border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 rounded-lg">
             <p className="text-red-700 dark:text-red-300 font-medium">Search Error</p>
             <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errorMessage}</p>
-            {(errorMessage.includes('API key') || errorMessage.includes('OPENAI_API_KEY')) && (
-              <p className="text-red-600 dark:text-red-400 text-sm mt-2">
-                Please ensure all required API keys are set in your environment variables:
-                <br />• OPENAI_API_KEY (for GPT-4o)
-                <br />• ANTHROPIC_API_KEY (optional, for Claude)
-                <br />• FIRECRAWL_API_KEY (can be provided via UI)
-              </p>
+            {(errorMessage.includes('API key') || errorMessage.includes('not set') || errorMessage.includes('required')) && (
+              <div className="text-red-600 dark:text-red-400 text-sm mt-2">
+                <p>Please ensure your providers are properly configured:</p>
+                <ul className="mt-1 space-y-1">
+                  <li>• Search Provider: {searchProviderDisplayName} {hasApiKey ? '✓' : '✗'}</li>
+                  <li>• LLM Provider: {llmProviderDisplayName} {hasLlmConfig ? '✓' : '✗'}</li>
+                </ul>
+                <p className="mt-2">
+                  Configure providers in the Settings page or set the appropriate environment variables.
+                </p>
+              </div>
             )}
           </div>
         ),
@@ -605,8 +633,8 @@ export function Chat() {
     const userMessage = input;
     setInput('');
 
-    // Check if we have API key (only block for FireCrawl since others aren't fully implemented yet)
-    if (!hasApiKey && searchProvider === 'firecrawl') {
+    // Check if we have API key (block for any provider without API key)
+    if (!hasApiKey) {
       // Store the query and show modal
       setPendingQuery(userMessage);
       setShowApiKeyModal(true);
@@ -622,9 +650,33 @@ export function Chat() {
       return;
     }
 
-    // For non-FireCrawl providers without API keys, show a warning but continue
-    if (!hasApiKey && searchProvider !== 'firecrawl') {
-      toast.warning(`${searchProviderDisplayName} is not fully configured. Using FireCrawl as fallback.`);
+    // Check if LLM is properly configured
+    if (!hasLlmConfig) {
+      // Add user message and error message
+      const userMsgId = Date.now().toString();
+      setMessages(prev => [...prev, {
+        id: userMsgId,
+        role: 'user',
+        content: userMessage,
+        isSearch: true
+      }]);
+
+      const errorMsgId = (Date.now() + 1).toString();
+      setMessages(prev => [...prev, {
+        id: errorMsgId,
+        role: 'assistant',
+        content: (
+          <div className="p-4 border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+            <p className="text-amber-700 dark:text-amber-300 font-medium">Configuration Required</p>
+            <p className="text-amber-600 dark:text-amber-400 text-sm mt-1">
+              Your {llmProviderDisplayName} LLM provider is not properly configured. 
+              Please configure it in the Settings page before performing searches.
+            </p>
+          </div>
+        ),
+        isSearch: false
+      }]);
+      return;
     }
 
     // Add user message
