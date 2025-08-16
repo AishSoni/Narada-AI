@@ -123,6 +123,68 @@
   svg {
     color: inherit;
   }
+  
+  /* Ensure dialog content has proper background */
+  [data-slot="dialog-content"] {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  
+  [data-slot="dialog-overlay"] {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+  }
+
+  /* Ensure dropdown and select components have proper dark mode support */
+  [data-radix-popper-content-wrapper] {
+    z-index: 9999;
+  }
+  
+  /* Force proper colors for dropdown and select content in dark mode */
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content] {
+    background-color: hsl(var(--popover)) !important;
+    color: hsl(var(--popover-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  
+  /* Force proper colors for dropdown and select items in dark mode */
+  [data-radix-select-item],
+  [data-radix-dropdown-menu-item] {
+    color: hsl(var(--popover-foreground)) !important;
+  }
+  
+  [data-radix-select-item]:hover,
+  [data-radix-select-item]:focus,
+  [data-radix-select-item][data-highlighted],
+  [data-radix-dropdown-menu-item]:hover,
+  [data-radix-dropdown-menu-item]:focus,
+  [data-radix-dropdown-menu-item][data-highlighted] {
+    background-color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
+  }
+  
+  /* Additional Radix UI component styling for dark mode */
+  [data-radix-select-viewport] {
+    background-color: hsl(var(--popover)) !important;
+  }
+  
+  /* Ensure select and dropdown triggers have proper styling */
+  [data-radix-select-trigger],
+  [data-radix-dropdown-menu-trigger] {
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    border-color: hsl(var(--input)) !important;
+  }
+  
+  /* Fix for any lingering hardcoded colors in Radix components */
+  [data-radix-select-content] * {
+    color: inherit !important;
+  }
+  
+  [data-radix-dropdown-menu-content] * {
+    color: inherit !important;
+  }
 }
 
 :root {

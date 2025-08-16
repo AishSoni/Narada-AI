@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { search } from './search';
+import { searchWithKnowledge } from './search-with-knowledge';
 import { readStreamableValue } from 'ai/rsc';
 import { SearchDisplay } from './search-display';
 import { SearchEvent, Source } from '@/lib/langgraph-search-engine';
@@ -19,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SUGGESTED_QUERIES = [
   "Who are the founders of Firecrawl?",
@@ -225,6 +227,13 @@ export function Chat() {
   const [, setLlmProvider] = useState<string>('openai');
   const [llmProviderDisplayName, setLlmProviderDisplayName] = useState<string>('OpenAI');
   const [hasLlmConfig, setHasLlmConfig] = useState<boolean>(false);
+  const [selectedKnowledgeStack, setSelectedKnowledgeStack] = useState<string>('web-only');
+  const [knowledgeStacks, setKnowledgeStacks] = useState<Array<{
+    id: string;
+    name: string;
+    description: string;
+    documentsCount: number;
+  }>>([]);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSelectSuggestion = (suggestion: string) => {
@@ -331,7 +340,22 @@ export function Chat() {
         console.error('Failed to restore conversation:', error);
       }
     }
+    
+    // Load knowledge stacks
+    loadKnowledgeStacks();
   }, []);
+
+  const loadKnowledgeStacks = async () => {
+    try {
+      const response = await fetch('/api/knowledge-stacks');
+      if (response.ok) {
+        const stacks = await response.json();
+        setKnowledgeStacks(stacks);
+      }
+    } catch (error) {
+      console.error('Failed to load knowledge stacks:', error);
+    }
+  };
 
   // Save conversation whenever messages change (with debouncing)
   useEffect(() => {
@@ -406,7 +430,20 @@ export function Chat() {
       }
     };
 
+    const loadKnowledgeStacks = async () => {
+      try {
+        const response = await fetch('/api/knowledge-stacks');
+        if (response.ok) {
+          const stacks = await response.json();
+          setKnowledgeStacks(stacks);
+        }
+      } catch (error) {
+        console.error('Failed to load knowledge stacks:', error);
+      }
+    };
+
     checkEnvironment();
+    loadKnowledgeStacks();
   }, []);
 
   // Auto-scroll to bottom when messages change
@@ -485,8 +522,15 @@ export function Chat() {
       }
       
       // Get search stream with context
-      // Pass the API key only if user provided one, otherwise let server use env var
-      const { stream } = await search(query, conversationContext, firecrawlApiKey || undefined);
+      // Use knowledge stack search if selected, otherwise use regular web search
+      let stream;
+      if (selectedKnowledgeStack && selectedKnowledgeStack !== 'web-only') {
+        const result = await searchWithKnowledge(query, conversationContext, selectedKnowledgeStack, firecrawlApiKey || undefined);
+        stream = result.stream;
+      } else {
+        const result = await search(query, conversationContext, firecrawlApiKey || undefined);
+        stream = result.stream;
+      }
       let finalContent = '';
       
       // Read stream and update events
@@ -698,6 +742,24 @@ export function Chat() {
         // Center input when no messages
         <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
           <div className="w-full max-w-4xl">
+            {/* Knowledge Stack Selector */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <label className="text-sm text-gray-600 dark:text-gray-400">Knowledge Stack:</label>
+              <Select value={selectedKnowledgeStack} onValueChange={setSelectedKnowledgeStack}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Web Search Only" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="web-only">Web Search Only</SelectItem>
+                  {knowledgeStacks.map((stack) => (
+                    <SelectItem key={stack.id} value={stack.id}>
+                      {stack.name} ({stack.documentsCount} docs)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             <form onSubmit={handleSubmit}>
               <div className="relative">
                 <input
@@ -790,9 +852,47 @@ export function Chat() {
           {/* Input */}
           <div className="bg-white dark:bg-zinc-950 px-4 sm:px-6 lg:px-8 py-6">
             <div className="max-w-4xl mx-auto">
-              {/* New Chat Button */}
-              {messages.length > 0 && (
-                <div className="flex justify-center mb-4">
+              {/* Knowledge Stack Selector and New Chat Button */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-gray-600 dark:text-gray-400">Search Mode:</label>
+                  <Select value={selectedKnowledgeStack} onValueChange={setSelectedKnowledgeStack}>
+                    <SelectTrigger className={`w-[220px] ${selectedKnowledgeStack !== 'web-only' ? 'border-orange-300 bg-orange-50 dark:bg-orange-950/20' : ''}`}>
+                      <SelectValue placeholder="Web Search Only" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="web-only">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
+                          </svg>
+                          Web Search Only
+                        </div>
+                      </SelectItem>
+                      {knowledgeStacks.map((stack) => (
+                        <SelectItem key={stack.id} value={stack.id}>
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                            {stack.name} ({stack.documentsCount} docs)
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedKnowledgeStack !== 'web-only' && (
+                    <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      RAG Active
+                    </div>
+                  )}
+                </div>
+                
+                {/* New Chat Button */}
+                {messages.length > 0 && (
                   <Button
                     variant="outline"
                     onClick={clearCurrentChat}
@@ -800,8 +900,8 @@ export function Chat() {
                   >
                     Start New Chat
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
               
               <form onSubmit={handleSubmit}>
                 <div className="relative">

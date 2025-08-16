@@ -32,11 +32,15 @@ export default function RootLayout({
                   if (theme === 'dark') {
                     document.documentElement.classList.add('dark');
                   } else if (theme === 'light') {
-                    document.documentElement.classList.add('light');
+                    document.documentElement.classList.remove('dark');
                   } else if (theme === 'auto') {
                     const hour = new Date().getHours();
                     const isDark = hour >= 18 || hour < 6;
-                    document.documentElement.classList.add(isDark ? 'dark' : 'light');
+                    if (isDark) {
+                      document.documentElement.classList.add('dark');
+                    } else {
+                      document.documentElement.classList.remove('dark');
+                    }
                   }
                 } catch (e) {}
               })();

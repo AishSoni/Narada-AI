@@ -21,7 +21,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Save, Eye, EyeOff, Key, Settings as SettingsIcon, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Save, Eye, EyeOff, Key, Settings as SettingsIcon, ChevronDown, ChevronRight, Database } from "lucide-react";
 import Link from "next/link";
 import { SEARCH_CONFIG } from "@/lib/config";
 import { ThemeSettings } from "@/components/theme-settings";
@@ -515,6 +515,12 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link href="/knowledge-stacks">
+              <Button variant="outline" className="gap-2">
+                <Database className="h-4 w-4" />
+                Knowledge Stacks
+              </Button>
+            </Link>
             <Button onClick={testConfiguration} variant="outline">
               Test Configuration
             </Button>

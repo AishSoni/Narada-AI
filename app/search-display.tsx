@@ -162,9 +162,7 @@ function SourceProcessingLine({ url, stage, summary }: {
   stage: 'browsing' | 'extracting' | 'analyzing' | 'complete';
   summary?: string;
 }) {
-  // const stages = ['browsing', 'extracting', 'analyzing', 'complete'];
-  // const _currentStageIndex = stages.indexOf(stage);
-  
+  const isKnowledgeStack = url.startsWith('knowledge://');
   
   const stageLabels = {
     browsing: 'Browsing',
@@ -173,23 +171,43 @@ function SourceProcessingLine({ url, stage, summary }: {
     complete: 'Complete'
   };
   
+  // Extract knowledge stack info from URL
+  const displayName = isKnowledgeStack 
+    ? url.replace('knowledge://', '') 
+    : new URL(url).hostname;
+  
   return (
     <div className="group flex items-start gap-2 text-xs py-1 animate-fade-in">
-      <Image 
-        src={getFaviconUrl(url)} 
-        alt=""
-        width={16}
-        height={16}
-        className="w-4 h-4 rounded flex-shrink-0 mt-0.5"
-        onError={(e) => {
-          const img = e.target as HTMLImageElement;
-          img.src = getDefaultFavicon(16);
-          markFaviconFailed(url);
-        }}
-      />
+      {isKnowledgeStack ? (
+        <div className="w-4 h-4 rounded flex-shrink-0 mt-0.5 bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+          <svg className="w-3 h-3 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+        </div>
+      ) : (
+        <Image 
+          src={getFaviconUrl(url)} 
+          alt=""
+          width={16}
+          height={16}
+          className="w-4 h-4 rounded flex-shrink-0 mt-0.5"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            img.src = getDefaultFavicon(16);
+            markFaviconFailed(url);
+          }}
+        />
+      )}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-gray-600 dark:text-gray-400 truncate">
-          {new URL(url).hostname}
+        <div className={`font-medium truncate ${
+          isKnowledgeStack 
+            ? 'text-orange-600 dark:text-orange-400' 
+            : 'text-gray-600 dark:text-gray-400'
+        }`}>
+          {displayName}
+          {isKnowledgeStack && (
+            <span className="text-xs text-gray-500 dark:text-gray-500 ml-1">(Knowledge Stack)</span>
+          )}
         </div>
         {stage === 'complete' ? (
           summary ? (
@@ -796,15 +814,47 @@ function renderEvent(event: SearchEvent, _completedPhases: Set<string>, currentP
       );
     
     case 'found':
+      // Check if this includes knowledge stack sources
+      const hasKnowledgeStackSources = event.sources.some(source => 
+        source.url.startsWith('knowledge://')
+      );
+      
+      const knowledgeStackCount = event.sources.filter(source => 
+        source.url.startsWith('knowledge://')
+      ).length;
+      
+      const webSourceCount = event.sources.length - knowledgeStackCount;
+      
       return (
         <div className="text-sm text-gray-700 dark:text-gray-300">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-              <svg className="w-3 h-3 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+            <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
+              hasKnowledgeStackSources 
+                ? 'bg-orange-100 dark:bg-orange-900/30' 
+                : 'bg-green-100 dark:bg-green-900/30'
+            }`}>
+              {hasKnowledgeStackSources ? (
+                <svg className="w-3 h-3 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              ) : (
+                <svg className="w-3 h-3 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
             </div>
-            <span>Found <span className="font-bold text-gray-900 dark:text-gray-100">{event.sources.length} sources</span> for &quot;{event.query}&quot;</span>
+            <span>
+              Found <span className="font-bold text-gray-900 dark:text-gray-100">{event.sources.length} sources</span>
+              {hasKnowledgeStackSources && (
+                <span className="text-orange-600 dark:text-orange-400 font-medium ml-1">
+                  ({knowledgeStackCount} from knowledge stack{webSourceCount > 0 ? `, ${webSourceCount} from web` : ''})
+                </span>
+              )}
+              {!hasKnowledgeStackSources && (
+                <span> from web</span>
+              )}
+              <span> for &quot;{event.query}&quot;</span>
+            </span>
           </div>
         </div>
       );

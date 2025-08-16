@@ -1,7 +1,7 @@
 import { Chat } from './chat';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Settings, History } from 'lucide-react';
+import { Settings, History, Database } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
@@ -24,6 +24,13 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
+            <Link
+              href="/knowledge-stacks"
+              className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#36322F] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 h-10 px-4 py-2 font-medium gap-2"
+            >
+              <Database className="w-4 h-4" />
+              Knowledge Stacks
+            </Link>
             <Link
               href="/history"
               className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#36322F] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 h-10 px-4 py-2 font-medium gap-2"
