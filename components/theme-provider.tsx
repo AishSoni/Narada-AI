@@ -33,13 +33,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const timeBasedTheme = getTimeBasedTheme()
       setResolvedTheme(timeBasedTheme)
       if (mounted) {
-        document.documentElement.classList.toggle('dark', timeBasedTheme === 'dark')
+        // Ensure we remove the opposite class before adding the correct one
+        if (timeBasedTheme === 'dark') {
+          document.documentElement.classList.remove('light')
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+          document.documentElement.classList.add('light')
+        }
         localStorage.setItem(THEME_CONFIG.STORAGE_KEY, 'auto')
       }
     } else {
       setResolvedTheme(newTheme)
       if (mounted) {
-        document.documentElement.classList.toggle('dark', newTheme === 'dark')
+        // Ensure we remove the opposite class before adding the correct one
+        if (newTheme === 'dark') {
+          document.documentElement.classList.remove('light')
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+          document.documentElement.classList.add('light')
+        }
         localStorage.setItem(THEME_CONFIG.STORAGE_KEY, newTheme)
       }
     }
@@ -56,11 +70,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const timeBasedTheme = getTimeBasedTheme()
       setTheme('auto')
       setResolvedTheme(timeBasedTheme)
-      document.documentElement.classList.toggle('dark', timeBasedTheme === 'dark')
+      // Ensure we remove the opposite class before adding the correct one
+      if (timeBasedTheme === 'dark') {
+        document.documentElement.classList.remove('light')
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+        document.documentElement.classList.add('light')
+      }
     } else {
       setTheme(savedTheme)
       setResolvedTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
+      // Ensure we remove the opposite class before adding the correct one
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.remove('light')
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+        document.documentElement.classList.add('light')
+      }
     }
 
     // Set up interval to update auto theme based on time
@@ -71,7 +99,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const currentTimeTheme = getTimeBasedTheme()
         setResolvedTheme(prev => {
           if (currentTimeTheme !== prev) {
-            document.documentElement.classList.toggle('dark', currentTimeTheme === 'dark')
+            // Ensure we remove the opposite class before adding the correct one
+            if (currentTimeTheme === 'dark') {
+              document.documentElement.classList.remove('light')
+              document.documentElement.classList.add('dark')
+            } else {
+              document.documentElement.classList.remove('dark')
+              document.documentElement.classList.add('light')
+            }
             return currentTimeTheme
           }
           return prev

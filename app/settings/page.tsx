@@ -413,7 +413,7 @@ export default function SettingsPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold">Settings</h1>
+              <h1 className="text-3xl font-bold text-foreground">Settings</h1>
               <p className="text-muted-foreground">Configure your API providers and models</p>
             </div>
           </div>

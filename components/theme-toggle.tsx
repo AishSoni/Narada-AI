@@ -62,7 +62,7 @@ export function ThemeToggle() {
     <Button 
       variant="outline" 
       size="icon"
-      className="h-10 w-10"
+      className="h-10 w-10 text-foreground dark:text-foreground border-input hover:bg-accent hover:text-accent-foreground"
       onClick={cycleTheme}
       title={getTooltipText()}
     >
