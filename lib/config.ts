@@ -54,7 +54,8 @@ export const API_PROVIDERS = {
   SEARCH: {
     FIRECRAWL: 'firecrawl',
     TAVILY: 'tavily',
-    SERP: 'serp'
+    SERP: 'serp',
+    DUCKDUCKGO: 'duckduckgo'
   },
   LLM: {
     OPENAI: 'openai',

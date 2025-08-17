@@ -38,6 +38,9 @@ export function getAppConfig(): AppConfig {
     case API_PROVIDERS.SEARCH.SERP:
       searchApiKey = process.env.SERP_API_KEY || '';
       break;
+    case API_PROVIDERS.SEARCH.DUCKDUCKGO:
+      searchApiKey = process.env.DUCKDUCKGO_API_KEY || '';
+      break;
   }
   
   // Determine LLM configuration based on provider
@@ -126,6 +129,7 @@ export function getProviderDisplayName(provider: string, type: 'search' | 'llm' 
         case API_PROVIDERS.SEARCH.FIRECRAWL: return 'FireCrawl';
         case API_PROVIDERS.SEARCH.TAVILY: return 'Tavily';
         case API_PROVIDERS.SEARCH.SERP: return 'SERP API';
+        case API_PROVIDERS.SEARCH.DUCKDUCKGO: return 'DuckDuckGo';
         default: return provider;
       }
     case 'llm':

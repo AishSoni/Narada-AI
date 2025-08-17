@@ -32,6 +32,7 @@ interface EnvironmentConfig {
   FIRECRAWL_API_KEY: string;
   TAVILY_API_KEY: string;
   SERP_API_KEY: string;
+  DUCKDUCKGO_API_KEY: string;
   
   // LLM Provider
   LLM_PROVIDER: string;
@@ -78,7 +79,8 @@ interface EnvironmentConfig {
 const SEARCH_PROVIDERS = [
   { value: 'firecrawl', label: 'FireCrawl', description: 'Web scraping and crawling API' },
   { value: 'tavily', label: 'Tavily', description: 'AI search API for research' },
-  { value: 'serp', label: 'SERP API', description: 'Google search results API' }
+  { value: 'serp', label: 'SERP API', description: 'Google search results API' },
+  { value: 'duckduckgo', label: 'DuckDuckGo', description: 'Offers private searches but has very restricting rate limits.' }
 ];
 
 const LLM_PROVIDERS = [
@@ -109,6 +111,7 @@ export default function SettingsPage() {
     FIRECRAWL_API_KEY: '',
     TAVILY_API_KEY: '',
     SERP_API_KEY: '',
+    DUCKDUCKGO_API_KEY: '',
     LLM_PROVIDER: 'openai',
     OPENAI_API_KEY: '',
     OPENAI_LLM_MODEL: 'gpt-4o-mini',
@@ -591,6 +594,9 @@ export default function SettingsPage() {
               }
               {config.SEARCH_API_PROVIDER === 'serp' && 
                 renderApiKeyInput('SERP_API_KEY', 'SERP API Key', 'sk-...')
+              }
+              {config.SEARCH_API_PROVIDER === 'duckduckgo' && 
+                renderApiKeyInput('DUCKDUCKGO_API_KEY', 'DuckDuckGo API Key', 'ddg-...')
               }
             </CardContent>
           </Card>

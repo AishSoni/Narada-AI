@@ -125,7 +125,7 @@ Narada AI offers two ways to configure your API providers and settings:
 1. Start the application: `npm run dev`
 2. Click the "Settings" button in the top-right corner
 3. Configure your API providers:
-   - Choose your search provider (FireCrawl, Tavily, or SERP)
+   - Choose your search provider (FireCrawl, Tavily, SERP, or DuckDuckGo)
    - Choose your LLM provider (OpenAI, Ollama, or OpenRouter)  
    - Choose your embedding provider (OpenAI, Cohere, or Ollama)
 4. Enter your API keys for the selected providers
@@ -444,6 +444,7 @@ For support, please:
 | Firecrawl | Web scraping and content extraction | [firecrawl.dev/app/api-keys](https://www.firecrawl.dev/app/api-keys) |
 | OpenAI | Search planning and response synthesis | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | Tavily | Web search and content discovery | [tavily.com](https://tavily.com) |
+| DuckDuckGo | Private search with rate limits | [DuckDuckGo API](https://duckduckgo.com/api) |
 
 ### Quick Start
 

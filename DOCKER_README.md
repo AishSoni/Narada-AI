@@ -100,7 +100,7 @@ The application supports the following environment variables:
 #### Provider Selection
 - `LLM_PROVIDER` - LLM provider (openai, openrouter, cohere, ollama)
 - `EMBEDDING_PROVIDER` - Embedding provider (openai, cohere)
-- `SEARCH_PROVIDER` - Search provider (tavily, serp, firecrawl)
+- `SEARCH_PROVIDER` - Search provider (tavily, serp, firecrawl, duckduckgo)
 - `VECTOR_DB_PROVIDER` - Vector database provider (qdrant)
 
 ### Volumes

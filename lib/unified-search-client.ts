@@ -2,6 +2,7 @@
 import { FirecrawlClient } from './firecrawl';
 import { TavilyClient } from './tavily';
 import { SerpClient } from './serp';
+import { DuckDuckGoClient } from './duckduckgo';
 import { getAppConfig } from './app-config';
 import { API_PROVIDERS } from './config';
 
@@ -57,6 +58,9 @@ export class UnifiedSearchClient implements SearchClientInterface {
       case API_PROVIDERS.SEARCH.SERP:
         this.client = new SerpClient(providedApiKey || config.searchApiKey);
         break;
+      case API_PROVIDERS.SEARCH.DUCKDUCKGO:
+        this.client = new DuckDuckGoClient(providedApiKey || config.searchApiKey);
+        break;
       default:
         // Fallback to FireCrawl
         this.client = new FirecrawlClient(providedApiKey || process.env.FIRECRAWL_API_KEY);
@@ -84,6 +88,13 @@ export class UnifiedSearchClient implements SearchClientInterface {
           gl: 'us',
           hl: 'en',
         };
+      } else if (this.client instanceof DuckDuckGoClient) {
+        // Convert options to DuckDuckGo format
+        providerOptions = {
+          max_results: options?.limit || 10,
+          region: 'us-en',
+          safesearch: 'moderate',
+        };
       }
       
       const response = await this.client.search(query, providerOptions);
@@ -94,6 +105,8 @@ export class UnifiedSearchClient implements SearchClientInterface {
       } else if (this.client instanceof TavilyClient) {
         return this.client.formatResults(response);
       } else if (this.client instanceof SerpClient) {
+        return this.client.formatResults(response);
+      } else if (this.client instanceof DuckDuckGoClient) {
         return this.client.formatResults(response);
       }
       
