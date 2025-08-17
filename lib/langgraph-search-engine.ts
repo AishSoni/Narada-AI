@@ -37,6 +37,11 @@ export interface Source {
   summary?: string;
 }
 
+export interface ExtractedQuery {
+  question: string;
+  searchQuery: string;
+}
+
 export interface SearchResult {
   url: string;
   title: string;
@@ -885,7 +890,41 @@ export class LangGraphSearchEngine {
     context?: { query: string; response: string }[],
     checkpointId?: string
   ): Promise<void> {
+    return this.searchWithExtractedQueries(query, onEvent, context, undefined, checkpointId);
+  }
+
+  /**
+   * Enhanced search method that allows passing pre-extracted queries to ensure consistency 
+   * between RAG and web search. This method enables the unified search pipeline to use
+   * the same searchable terms for both knowledge stack and web searches.
+   */
+  async searchWithExtractedQueries(
+    query: string,
+    onEvent: (event: SearchEvent) => void,
+    context?: { query: string; response: string }[],
+    preExtractedQueries?: ExtractedQuery[],
+    checkpointId?: string
+  ): Promise<void> {
     try {
+      // Convert pre-extracted queries to sub-queries format if provided
+      let subQueries: Array<{
+        question: string;
+        searchQuery: string;
+        answered: boolean;
+        confidence: number;
+        sources: string[];
+      }> | undefined;
+
+      if (preExtractedQueries) {
+        subQueries = preExtractedQueries.map(sq => ({
+          question: sq.question,
+          searchQuery: sq.searchQuery,
+          answered: false,
+          confidence: 0,
+          sources: []
+        }));
+      }
+
       const initialState: SearchState = {
         query,
         context,
@@ -902,7 +941,7 @@ export class LangGraphSearchEngine {
         followUpQuestions: undefined,
         error: undefined,
         errorType: undefined,
-        subQueries: undefined,
+        subQueries, // Pass pre-extracted queries if available
         searchAttempt: 0
       };
 
@@ -1078,7 +1117,8 @@ ${sources.slice(0, SEARCH_CONFIG.MAX_SOURCES_TO_CHECK).map(s => {
     }
   }
 
-  private async extractSubQueries(query: string): Promise<Array<{ question: string; searchQuery: string }>> {
+  // Extract sub-queries from a user query - made public for use by unified search
+  public async extractSubQueries(query: string): Promise<ExtractedQuery[]> {
     const messages = [
       new SystemMessage(`Extract the individual factual questions from this query. Each question should be something that can be definitively answered.
 

@@ -1,4 +1,4 @@
-import { LangGraphSearchEngine, SearchEvent } from './langgraph-search-engine';
+import { LangGraphSearchEngine, SearchEvent, ExtractedQuery } from './langgraph-search-engine';
 import { UnifiedSearchClient } from './unified-search-client';
 import { knowledgeStackStore } from './knowledge-stack-store';
 import { SearchResult } from './search-engine';
@@ -89,6 +89,16 @@ async function searchKnowledgeStack(stackId: string, query: string): Promise<Kno
   }
 }
 
+/**
+ * Unified search function that performs RAG search first, then web search.
+ * 
+ * IMPORTANT FIX: This function now ensures that both RAG and web search use the same 
+ * searchable terms by first breaking down the user's query into searchable terms 
+ * (just like the web search does), and then using those same terms for both searches.
+ * 
+ * Previously, RAG search used the raw user query while web search broke it down into
+ * searchable terms, leading to inconsistent search behavior.
+ */
 export async function unifiedSearchWithKnowledge(
   query: string,
   context: Array<{ query: string; response: string }>,
@@ -102,7 +112,37 @@ export async function unifiedSearchWithKnowledge(
     const searchClient = new UnifiedSearchClient();
     const searchEngine = new LangGraphSearchEngine(searchClient);
 
-    // If a knowledge stack is selected, search it first
+    // First, break down the user query into searchable terms
+    // This ensures both RAG and web search use the same searchable terms
+    let searchTerms: string[] = [];
+    
+    if (onEvent) {
+      onEvent({
+        type: 'phase-update',
+        phase: 'understanding',
+        message: 'Breaking down your query into searchable terms...'
+      });
+    }
+
+    try {
+      // Extract sub-queries to get searchable terms (same as LangGraphSearchEngine does)
+      const extractedQueries: ExtractedQuery[] = await searchEngine.extractSubQueries(query);
+      searchTerms = extractedQueries.map(sq => sq.searchQuery);
+      
+      console.log(`[RAG_WEB_SYNC] Extracted search terms from query "${query}":`, searchTerms);
+      
+      if (onEvent && searchTerms.length > 1) {
+        onEvent({
+          type: 'thinking',
+          message: `I'll search for: ${searchTerms.join(', ')}`
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to extract sub-queries, using original query:', error);
+      searchTerms = [query]; // Fallback to original query
+    }
+
+    // If a knowledge stack is selected, search it first using the extracted search terms
     let knowledgeResults: SearchResult[] = [];
     let knowledgeStackName = '';
 
@@ -114,10 +154,33 @@ export async function unifiedSearchWithKnowledge(
       });
 
       try {
-        console.log(`Searching knowledge stack: ${knowledgeStackId}`);
-        const knowledgeResponse = await searchKnowledgeStack(knowledgeStackId, query);
-        knowledgeResults = knowledgeResponse.results;
-        knowledgeStackName = knowledgeResponse.stackName;
+        console.log(`Searching knowledge stack: ${knowledgeStackId} with terms: ${searchTerms.join(', ')}`);
+        console.log(`[RAG_WEB_SYNC] Using search terms for RAG search:`, searchTerms);
+        
+        // Search knowledge stack using each search term and combine results
+        const allKnowledgeResults: SearchResult[] = [];
+        const seenIds = new Set<string>();
+        
+        for (const searchTerm of searchTerms) {
+          const knowledgeResponse = await searchKnowledgeStack(knowledgeStackId, searchTerm);
+          
+          // Add unique results to avoid duplicates
+          for (const result of knowledgeResponse.results) {
+            if (!seenIds.has(result.id)) {
+              seenIds.add(result.id);
+              allKnowledgeResults.push(result);
+            }
+          }
+          
+          if (!knowledgeStackName) {
+            knowledgeStackName = knowledgeResponse.stackName;
+          }
+        }
+        
+        // Sort by relevance score and take top results
+        knowledgeResults = allKnowledgeResults
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5);
 
         if (knowledgeResults.length > 0) {
           onEvent({
@@ -143,7 +206,7 @@ export async function unifiedSearchWithKnowledge(
       }
     }
 
-    // Perform web search
+    // Perform web search using the same extracted search terms
     let webSources: any[] = [];
     let finalAnswer = '';
 
@@ -193,8 +256,22 @@ export async function unifiedSearchWithKnowledge(
       }
     };
 
-    // Start web search
-    await searchEngine.search(query, wrappedOnEvent, context);
+    // Start web search using the same extracted search queries for consistency
+    if (searchTerms.length > 0) {
+      console.log(`[RAG_WEB_SYNC] Using same search terms for web search:`, searchTerms);
+      
+      // Convert search terms back to the format expected by LangGraphSearchEngine
+      const extractedQueries: ExtractedQuery[] = searchTerms.map(term => ({
+        question: `Information about ${term}`,
+        searchQuery: term
+      }));
+      
+      await searchEngine.searchWithExtractedQueries(query, wrappedOnEvent, context, extractedQueries);
+    } else {
+      console.log(`[RAG_WEB_SYNC] No search terms extracted, falling back to original query`);
+      // Fallback to regular search if no terms were extracted
+      await searchEngine.search(query, wrappedOnEvent, context);
+    }
 
   } catch (error) {
     console.error('Unified search error:', error);
