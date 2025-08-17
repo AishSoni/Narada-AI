@@ -44,10 +44,10 @@ function extractSnippet(content: string, query: string, maxLength = 200): string
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { stackId: string } }
+  { params }: { params: Promise<{ stackId: string }> }
 ) {
   try {
-    const stackId = params.stackId;
+    const { stackId } = await params;
     const { query, limit = 5 } = await request.json();
     
     if (!query || !query.trim()) {
@@ -66,50 +66,34 @@ export async function POST(
       );
     }
 
-    // Search documents using the store
-    const matchedDocuments = knowledgeStackStore.searchDocuments(stackId, query, limit);
+    // Search documents using vector embeddings and fallback to TF-IDF
+    const searchResults = await knowledgeStackStore.searchDocuments(stackId, query, limit);
 
-    if (matchedDocuments.length === 0) {
+    if (searchResults.length === 0) {
       return NextResponse.json({
         results: [],
         totalFound: 0,
         stackName: stack.name,
-        message: 'No documents found in this knowledge stack'
+        message: 'No documents found in this knowledge stack',
+        searchType: 'vector_and_keyword'
       });
     }
 
-    // Transform to the expected format
-    const queryLower = query.toLowerCase();
-    const queryWords = queryLower.split(/\s+/).filter((word: string) => word.length > 2);
-    
-    const scoredResults = matchedDocuments.map(doc => {
-      const contentLower = (doc.content || '').toLowerCase();
-      let score = 0;
-      
-      for (const word of queryWords) {
-        if (contentLower.includes(word)) {
-          score += 1;
-          // Bonus for exact matches
-          if (contentLower.includes(word + ' ') || contentLower.includes(' ' + word)) {
-            score += 0.5;
-          }
-        }
-      }
-      
-      return {
-        id: doc.id,
-        name: doc.name,
-        type: doc.type,
-        score: queryWords.length > 0 ? score / queryWords.length : 0,
-        content: doc.content || '',
-        snippet: extractSnippet(doc.content || '', query)
-      };
-    });
+    // Transform results to the expected format with snippets
+    const results = searchResults.map(result => ({
+      id: result.id,
+      name: result.name,
+      type: result.metadata?.fileType || 'unknown',
+      score: result.score,
+      content: result.content,
+      snippet: extractSnippet(result.content, query)
+    }));
 
     return NextResponse.json({
-      results: scoredResults,
-      totalFound: scoredResults.length,
-      stackName: stack.name
+      results,
+      totalFound: results.length,
+      stackName: stack.name,
+      searchType: 'vector_and_keyword'
     });
   } catch (error) {
     console.error('Error searching knowledge stack:', error);

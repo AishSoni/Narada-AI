@@ -3,10 +3,10 @@ import { knowledgeStackStore } from '@/lib/knowledge-stack-store';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { stackId: string; documentId: string } }
+  { params }: { params: Promise<{ stackId: string; documentId: string }> }
 ) {
   try {
-    const { stackId, documentId } = params;
+    const { stackId, documentId } = await params;
     
     const success = knowledgeStackStore.deleteDocument(stackId, documentId);
     if (!success) {

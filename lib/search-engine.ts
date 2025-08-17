@@ -11,6 +11,7 @@ export interface SearchResult {
     pageCount?: number;
     wordCount?: number;
     fileType?: string;
+    [key: string]: any;
   };
 }
 

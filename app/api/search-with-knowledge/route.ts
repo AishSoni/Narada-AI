@@ -13,10 +13,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Search request:', { query, knowledgeStackId, hasContext: !!context });
+
     // Create a ReadableStream for the search response
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          console.log('Starting unified search with knowledge...');
           await unifiedSearchWithKnowledge(
             query,
             context || [],
@@ -28,10 +31,17 @@ export async function POST(request: NextRequest) {
             }
           );
           
+          console.log('Search completed successfully');
           controller.close();
         } catch (error) {
           console.error('Search error:', error);
-          controller.error(error);
+          const errorChunk = JSON.stringify({
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Search failed',
+            errorType: 'search'
+          }) + '\n';
+          controller.enqueue(new TextEncoder().encode(errorChunk));
+          controller.close();
         }
       }
     });

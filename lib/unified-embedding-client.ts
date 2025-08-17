@@ -90,7 +90,8 @@ export class UnifiedEmbeddingClient {
     try {
       return await this.embeddingModel.embedQuery(text);
     } catch (error) {
-      throw new Error(`Failed to generate embedding with ${this.provider}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = this.handleEmbeddingError(error);
+      throw new Error(`Failed to generate embedding with ${this.provider}: ${errorMessage}`);
     }
   }
 
@@ -103,8 +104,64 @@ export class UnifiedEmbeddingClient {
     try {
       return await this.embeddingModel.embedDocuments(texts);
     } catch (error) {
-      throw new Error(`Failed to generate embeddings with ${this.provider}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = this.handleEmbeddingError(error);
+      throw new Error(`Failed to generate embeddings with ${this.provider}: ${errorMessage}`);
     }
+  }
+
+  // Enhanced error handling for embedding API failures
+  private handleEmbeddingError(error: any): string {
+    if (!error) return 'Unknown error';
+
+    // Handle HTTP errors
+    if (error.response) {
+      const status = error.response.status;
+      const statusText = error.response.statusText || '';
+      
+      switch (status) {
+        case 404:
+          if (this.provider === API_PROVIDERS.EMBEDDING.OLLAMA) {
+            return `Ollama model "${this.config.model}" not found. Please ensure the model is installed and available. Run: ollama pull ${this.config.model}`;
+          }
+          return `Embedding model not found (404). Please check your model configuration.`;
+        case 401:
+        case 403:
+          return `Authentication failed. Please check your API key configuration.`;
+        case 429:
+          return `Rate limit exceeded. Please wait before making more requests.`;
+        case 500:
+          return `Server error (500). The embedding service is temporarily unavailable.`;
+        case 503:
+          return `Service unavailable (503). The embedding service may be overloaded.`;
+        default:
+          return `HTTP ${status} error: ${statusText}`;
+      }
+    }
+
+    // Handle network errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      if (this.provider === API_PROVIDERS.EMBEDDING.OLLAMA) {
+        return `Cannot connect to Ollama server at ${this.config.apiUrl}. Please ensure Ollama is running.`;
+      }
+      return `Cannot connect to embedding service. Please check your network connection and API URL.`;
+    }
+
+    // Handle timeout errors
+    if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
+      return `Request timeout. The embedding service is taking too long to respond.`;
+    }
+
+    // Handle LangChain specific errors
+    if (error.message?.includes('Failed to fetch')) {
+      return `Network error: Failed to fetch from embedding service. Please check connectivity.`;
+    }
+
+    // Return the original error message if available
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return JSON.stringify(error);
   }
 
   // Get the embedding model instance

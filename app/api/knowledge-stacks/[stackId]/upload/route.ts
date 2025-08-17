@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { knowledgeStackStore } from '@/lib/knowledge-stack-store';
-import { extractTextFromFile, cleanText, chunkText } from '@/lib/text-extraction';
+import { extractTextFromFile, cleanText } from '@/lib/text-extraction';
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -13,14 +13,16 @@ function formatFileSize(bytes: number): string {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { stackId: string } }
+  { params }: { params: Promise<{ stackId: string }> }
 ) {
   try {
-    const stackId = params.stackId;
+    const { stackId } = await params;
+    console.log('Upload request for stack:', stackId);
     
     // Check if stack exists
     const stack = knowledgeStackStore.getStackById(stackId);
     if (!stack) {
+      console.log('Stack not found:', stackId);
       return NextResponse.json(
         { error: 'Knowledge stack not found' },
         { status: 404 }
@@ -29,8 +31,10 @@ export async function POST(
 
     const formData = await request.formData();
     const files = formData.getAll('documents') as File[];
+    console.log('Files received:', files.length);
     
     if (!files || files.length === 0) {
+      console.log('No files provided');
       return NextResponse.json(
         { error: 'No files provided' },
         { status: 400 }
@@ -105,8 +109,9 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error uploading documents:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'Unknown error');
     return NextResponse.json(
-      { error: 'Failed to upload documents' },
+      { error: `Failed to upload documents: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     );
   }

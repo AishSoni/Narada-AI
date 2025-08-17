@@ -50,20 +50,43 @@ function extractSnippet(content: string, query: string, maxLength = 200): string
 }
 
 async function searchKnowledgeStack(stackId: string, query: string): Promise<KnowledgeSearchResponse> {
-  // Check if stack exists
-  const stack = knowledgeStackStore.getStackById(stackId);
-  if (!stack) {
-    throw new Error('Knowledge stack not found');
+  try {
+    // Check if stack exists
+    const stack = knowledgeStackStore.getStackById(stackId);
+    if (!stack) {
+      const availableStacks = knowledgeStackStore.getAllStacks();
+      console.warn(`Knowledge stack with ID "${stackId}" not found. Available stacks:`, availableStacks.map(s => ({ id: s.id, name: s.name })));
+      
+      // If there's exactly one stack available, use it instead
+      if (availableStacks.length === 1) {
+        const fallbackStack = availableStacks[0];
+        console.log(`Using fallback stack: ${fallbackStack.id} - "${fallbackStack.name}"`);
+        
+        // Search documents using the fallback stack
+        const results = await knowledgeStackStore.searchDocuments(fallbackStack.id, query, 5);
+        
+        return {
+          results,
+          totalFound: results.length,
+          stackName: fallbackStack.name
+        };
+      }
+      
+      throw new Error(`Knowledge stack with ID "${stackId}" not found. Please check that the stack exists and try again.`);
+    }
+
+    // Search documents using the improved search engine with vector embeddings
+    const results = await knowledgeStackStore.searchDocuments(stackId, query, 5);
+
+    return {
+      results,
+      totalFound: results.length,
+      stackName: stack.name
+    };
+  } catch (error) {
+    console.error(`Error in searchKnowledgeStack for stackId ${stackId}:`, error);
+    throw error;
   }
-
-  // Search documents using the improved search engine
-  const results = knowledgeStackStore.searchDocuments(stackId, query, 5);
-
-  return {
-    results,
-    totalFound: results.length,
-    stackName: stack.name
-  };
 }
 
 export async function unifiedSearchWithKnowledge(
@@ -73,6 +96,8 @@ export async function unifiedSearchWithKnowledge(
   onEvent?: (event: SearchEvent) => void
 ): Promise<void> {
   try {
+    console.log('Starting unifiedSearchWithKnowledge with:', { query, knowledgeStackId, hasContext: !!context, hasOnEvent: !!onEvent });
+    
     // Initialize search client
     const searchClient = new UnifiedSearchClient();
     const searchEngine = new LangGraphSearchEngine(searchClient);
@@ -89,6 +114,7 @@ export async function unifiedSearchWithKnowledge(
       });
 
       try {
+        console.log(`Searching knowledge stack: ${knowledgeStackId}`);
         const knowledgeResponse = await searchKnowledgeStack(knowledgeStackId, query);
         knowledgeResults = knowledgeResponse.results;
         knowledgeStackName = knowledgeResponse.stackName;
@@ -106,10 +132,14 @@ export async function unifiedSearchWithKnowledge(
         }
       } catch (error) {
         console.error('Knowledge stack search error:', error);
-        onEvent({
-          type: 'thinking',
-          message: 'Knowledge stack search failed. Proceeding with web search only.'
-        });
+        if (onEvent) {
+          onEvent({
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Knowledge stack search failed',
+            errorType: 'search'
+          });
+        }
+        throw error; // Re-throw to be handled by the outer try-catch
       }
     }
 

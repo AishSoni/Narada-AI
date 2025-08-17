@@ -345,12 +345,23 @@ export function Chat() {
     loadKnowledgeStacks();
   }, []);
 
+  // Load knowledge stacks and validate current selection
   const loadKnowledgeStacks = async () => {
     try {
       const response = await fetch('/api/knowledge-stacks');
       if (response.ok) {
         const stacks = await response.json();
         setKnowledgeStacks(stacks);
+        
+        // Validate current selection
+        if (selectedKnowledgeStack !== 'web-only') {
+          const currentStackExists = stacks.some((stack: any) => stack.id === selectedKnowledgeStack);
+          if (!currentStackExists) {
+            console.warn(`Currently selected knowledge stack ${selectedKnowledgeStack} no longer exists. Resetting to web-only.`);
+            setSelectedKnowledgeStack('web-only');
+            toast.warning('Selected knowledge stack is no longer available. Reset to web search.');
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load knowledge stacks:', error);
@@ -525,8 +536,17 @@ export function Chat() {
       // Use knowledge stack search if selected, otherwise use regular web search
       let stream;
       if (selectedKnowledgeStack && selectedKnowledgeStack !== 'web-only') {
-        const result = await searchWithKnowledge(query, conversationContext, selectedKnowledgeStack, firecrawlApiKey || undefined);
-        stream = result.stream;
+        // Validate that the selected knowledge stack still exists
+        const stackExists = knowledgeStacks.some(stack => stack.id === selectedKnowledgeStack);
+        if (!stackExists) {
+          console.warn(`Selected knowledge stack ${selectedKnowledgeStack} not found. Falling back to web search.`);
+          toast.warning('Selected knowledge stack is no longer available. Using web search instead.');
+          const result = await search(query, conversationContext, firecrawlApiKey || undefined);
+          stream = result.stream;
+        } else {
+          const result = await searchWithKnowledge(query, conversationContext, selectedKnowledgeStack, firecrawlApiKey || undefined);
+          stream = result.stream;
+        }
       } else {
         const result = await search(query, conversationContext, firecrawlApiKey || undefined);
         stream = result.stream;

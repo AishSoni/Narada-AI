@@ -1,6 +1,5 @@
 import { Source } from './langgraph-search-engine';
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { LangGraphLLMClient } from './langgraph-llm-client';
 
 interface ProcessedSource extends Source {
   relevanceScore: number;
@@ -283,7 +282,7 @@ export class ContextProcessor {
   }
 
   /**
-   * Summarize a single source using GPT-4o-mini
+   * Summarize a single source using the configured LLM
    */
   private async summarizeSource(
     source: Source,
@@ -304,13 +303,14 @@ export class ContextProcessor {
     }
 
     try {
-      // No longer emit individual progress events
+      // Initialize the LLM client to use the user's selected model
+      const llmClient = new LangGraphLLMClient({
+        temperature: 0.3,
+        maxTokens: Math.ceil(targetLength / 3), // Rough token estimation
+      });
       
       // Create a focused prompt for relevance-based summarization
-      
-      const result = await generateText({
-        model: openai('gpt-4o-mini'),
-        prompt: `You are a research assistant helping to extract the most relevant information from a webpage.
+      const prompt = `You are a research assistant helping to extract the most relevant information from a webpage.
 
 User's question: "${query}"
 Related search queries: ${searchQueries.join(', ')}
@@ -329,12 +329,16 @@ Instructions:
 5. If the content has little relevance to the query, just note that briefly
 6. Target length: approximately ${targetLength} characters
 
-Provide a focused summary that would help answer the user's question:`,
-        temperature: 0.3,
-        maxTokens: Math.ceil(targetLength / 3), // Rough token estimation
-      });
+Provide a focused summary that would help answer the user's question:`;
 
-      const summary = result.text.trim();
+      const result = await llmClient.invoke([
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]);
+
+      const summary = result.content.trim();
       
       // Calculate a simple relevance score based on the summary
       const relevanceScore = this.calculateRelevanceFromSummary(summary, query, searchQueries);
@@ -350,13 +354,22 @@ Provide a focused summary that would help answer the user's question:`,
     } catch (error) {
       console.warn(`Failed to summarize source ${source.url}:`, error);
       
-      // Fallback to keyword extraction method
-      const keywords = this.extractKeywords(query, searchQueries);
-      const processed = await this.processSource(source, keywords);
+      // Fallback: If LLM summarization fails, use the original content with basic processing
+      // This ensures the system still works even if the LLM is not configured or fails
+      const truncatedContent = source.content.slice(0, Math.min(targetLength * 2, 8000));
       
-      // Use distributed budget for fallback
-      const fallbackSources = await this.distributeCharacterBudget([processed]);
-      return fallbackSources[0] || processed;
+      // Calculate a basic relevance score by checking keyword presence
+      const keywords = this.extractKeywords(query, searchQueries);
+      const relevanceScore = this.calculateBasicRelevance(truncatedContent, keywords);
+      
+      return {
+        ...source,
+        content: truncatedContent,
+        relevanceScore,
+        extractedSections: [truncatedContent],
+        keywords,
+        summarized: false // Mark as not summarized
+      };
     }
   }
 
@@ -422,5 +435,27 @@ Provide a focused summary that would help answer the user's question:`,
     
     // Combined score
     return (score * 0.6) + (keywordScore * 0.4);
+  }
+
+  /**
+   * Calculate basic relevance score when LLM summarization is not available
+   */
+  private calculateBasicRelevance(content: string, keywords: string[]): number {
+    const contentLower = content.toLowerCase();
+    let score = 0;
+    
+    // Check for keyword matches
+    const keywordMatches = keywords.filter(keyword => 
+      contentLower.includes(keyword.toLowerCase())
+    );
+    
+    // Base score from keyword density
+    score = Math.min(keywordMatches.length / Math.max(keywords.length, 1), 1.0);
+    
+    // Bonus for content length (longer content might be more informative)
+    const lengthBonus = Math.min(content.length / 5000, 0.3);
+    score += lengthBonus;
+    
+    return Math.min(Math.max(score, 0.1), 1.0); // Clamp between 0.1 and 1.0
   }
 }

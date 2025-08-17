@@ -1,0 +1,61 @@
+{
+  "stacks": [
+    {
+      "id": "a8c019d9-b8bb-43e9-bb68-822a77b8d627",
+      "name": "Optical Communication",
+      "description": "",
+      "documentsCount": 3,
+      "lastUpdated": "2025-08-17T14:55:45.799Z",
+      "size": "2.9 KB",
+      "createdAt": "2025-08-17T14:55:35.845Z"
+    }
+  ],
+  "documents": [
+    {
+      "id": "bc4128b3-9f74-4c7d-a7a6-6c60f7feb10e",
+      "stackId": "a8c019d9-b8bb-43e9-bb68-822a77b8d627",
+      "name": "MasterSlide_OC E-322.pdf",
+      "type": "application/pdf",
+      "size": "3.81 MB",
+      "uploadedAt": "2025-08-17T14:55:45.792Z",
+      "status": "completed",
+      "content": "Document: MasterSlide_OC E-322.pdf\nSource: PDF Document\nFile Size: 3.81 MB\n\nThis is a simulation of PDF text extraction. In a production environment, this would contain the actual text content extracted from the PDF file using libraries like pdf-parse or pdf2pic with OCR.\n\nThe extracted content would typically include:\n- Document headers and titles\n- Body text with proper paragraph structure\n- Tables and lists (formatted as text)\n- Metadata like author, creation date, etc.\n\nTo implement real PDF extraction, you would:\n1. Install pdf-parse: npm install pdf-parse\n2. Use it in a Node.js environment to extract text\n3. Handle images within PDFs using OCR if needed\n4. Preserve document structure and formatting\n\nExample implementation:\n```javascript\nimport pdf from 'pdf-parse';\nconst buffer = await file.arrayBuffer();\nconst data = await pdf(Buffer.from(buffer));\nreturn data.text;\n```\n\nThis simulated content represents what would be extracted from a typical PDF document.",
+      "metadata": {
+        "fileType": "pdf",
+        "pageCount": 1997,
+        "wordCount": 145
+      }
+    },
+    {
+      "id": "879cdbef-d31c-43f5-ac46-5188c5029b73",
+      "stackId": "a8c019d9-b8bb-43e9-bb68-822a77b8d627",
+      "name": "Notes-Optical Communication ECE-322 .pdf",
+      "type": "application/pdf",
+      "size": "4.84 MB",
+      "uploadedAt": "2025-08-17T14:55:45.798Z",
+      "status": "completed",
+      "content": "Document: Notes-Optical Communication ECE-322 .pdf\nSource: PDF Document\nFile Size: 4.84 MB\n\nThis is a simulation of PDF text extraction. In a production environment, this would contain the actual text content extracted from the PDF file using libraries like pdf-parse or pdf2pic with OCR.\n\nThe extracted content would typically include:\n- Document headers and titles\n- Body text with proper paragraph structure\n- Tables and lists (formatted as text)\n- Metadata like author, creation date, etc.\n\nTo implement real PDF extraction, you would:\n1. Install pdf-parse: npm install pdf-parse\n2. Use it in a Node.js environment to extract text\n3. Handle images within PDFs using OCR if needed\n4. Preserve document structure and formatting\n\nExample implementation:\n```javascript\nimport pdf from 'pdf-parse';\nconst buffer = await file.arrayBuffer();\nconst data = await pdf(Buffer.from(buffer));\nreturn data.text;\n```\n\nThis simulated content represents what would be extracted from a typical PDF document.",
+      "metadata": {
+        "fileType": "pdf",
+        "pageCount": 2539,
+        "wordCount": 147
+      }
+    },
+    {
+      "id": "20819219-2336-4a2d-b457-11daab111341",
+      "stackId": "a8c019d9-b8bb-43e9-bb68-822a77b8d627",
+      "name": "Optical Fiber Communications by John Senior.pdf",
+      "type": "application/pdf",
+      "size": "13.69 MB",
+      "uploadedAt": "2025-08-17T14:55:45.799Z",
+      "status": "completed",
+      "content": "Document: Optical Fiber Communications by John Senior.pdf\nSource: PDF Document\nFile Size: 13.69 MB\n\nThis is a simulation of PDF text extraction. In a production environment, this would contain the actual text content extracted from the PDF file using libraries like pdf-parse or pdf2pic with OCR.\n\nThe extracted content would typically include:\n- Document headers and titles\n- Body text with proper paragraph structure\n- Tables and lists (formatted as text)\n- Metadata like author, creation date, etc.\n\nTo implement real PDF extraction, you would:\n1. Install pdf-parse: npm install pdf-parse\n2. Use it in a Node.js environment to extract text\n3. Handle images within PDFs using OCR if needed\n4. Preserve document structure and formatting\n\nExample implementation:\n```javascript\nimport pdf from 'pdf-parse';\nconst buffer = await file.arrayBuffer();\nconst data = await pdf(Buffer.from(buffer));\nreturn data.text;\n```\n\nThis simulated content represents what would be extracted from a typical PDF document.",
+      "metadata": {
+        "fileType": "pdf",
+        "pageCount": 7177,
+        "wordCount": 149
+      }
+    }
+  ],
+  "lastSaved": "2025-08-17T14:55:46.803Z"
+}

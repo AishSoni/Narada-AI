@@ -49,6 +49,7 @@ interface EnvironmentConfig {
   COHERE_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_MODEL: string;
   OLLAMA_EMBEDDING_URL: string;
+  EMBEDDING_DIMENSIONS: number;
   
   // Vector Database Provider
   VECTOR_DB_PROVIDER: string;
@@ -121,6 +122,7 @@ export default function SettingsPage() {
     COHERE_EMBEDDING_MODEL: 'embed-english-v3.0',
     OLLAMA_EMBEDDING_MODEL: 'nomic-embed-text',
     OLLAMA_EMBEDDING_URL: 'http://localhost:11434',
+    EMBEDDING_DIMENSIONS: 1536,
     VECTOR_DB_PROVIDER: 'qdrant',
     QDRANT_API_KEY: '',
     QDRANT_URL: 'http://localhost:6333',
@@ -262,7 +264,7 @@ export default function SettingsPage() {
       return;
     }
 
-    // For Ollama, don't fetch with invalid URLs
+    // For Ollama, don't fetch with invalid URLs (but allow empty URL for default localhost)
     if (config.EMBEDDING_PROVIDER === 'ollama' && config.OLLAMA_EMBEDDING_URL) {
       try {
         new URL(config.OLLAMA_EMBEDDING_URL); // Validate URL format
@@ -282,8 +284,11 @@ export default function SettingsPage() {
         params.append('apiKey', config.OPENAI_API_KEY);
       } else if (config.EMBEDDING_PROVIDER === 'cohere' && config.COHERE_API_KEY && !config.COHERE_API_KEY.includes('•••')) {
         params.append('apiKey', config.COHERE_API_KEY);
-      } else if (config.EMBEDDING_PROVIDER === 'ollama' && config.OLLAMA_EMBEDDING_URL) {
-        params.append('apiUrl', config.OLLAMA_EMBEDDING_URL);
+      } else if (config.EMBEDDING_PROVIDER === 'ollama') {
+        // Send the URL if provided, otherwise the API will use default localhost:11434
+        if (config.OLLAMA_EMBEDDING_URL) {
+          params.append('apiUrl', config.OLLAMA_EMBEDDING_URL);
+        }
       }
 
       const response = await fetch(`/api/models/embeddings?${params}`);
@@ -879,6 +884,22 @@ export default function SettingsPage() {
                   </div>
                 </>
               )}
+
+              {/* Embedding Dimensions - Show for all providers */}
+              <div className="space-y-2">
+                <Label htmlFor="EMBEDDING_DIMENSIONS">Embedding Dimensions</Label>
+                <Input
+                  id="EMBEDDING_DIMENSIONS"
+                  type="number"
+                  min="1"
+                  max="4096"
+                  value={config.EMBEDDING_DIMENSIONS}
+                  onChange={(e) => updateConfig('EMBEDDING_DIMENSIONS', parseInt(e.target.value) || 1536)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Vector dimension for embeddings. Common values: OpenAI text-embedding-3-small (1536), text-embedding-3-large (3072), Cohere embed-english-v3.0 (1024), snowflake-arctic-embed (1024 or 768)
+                </p>
+              </div>
             </CardContent>
           </Card>
 
