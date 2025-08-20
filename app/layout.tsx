@@ -62,7 +62,28 @@ export default function RootLayout({
           <main className="">
             {children}
           </main>
-          <Toaster />
+          <Toaster 
+            theme="system"
+            richColors
+            closeButton
+            className="toaster"
+            toastOptions={{
+              style: {
+                background: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
+                border: '1px solid hsl(var(--border))',
+              },
+              className: 'group toast',
+              actionButtonStyle: {
+                background: 'hsl(var(--primary))',
+                color: 'hsl(var(--primary-foreground))',
+              },
+              cancelButtonStyle: {
+                background: 'hsl(var(--muted))',
+                color: 'hsl(var(--muted-foreground))',
+              },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

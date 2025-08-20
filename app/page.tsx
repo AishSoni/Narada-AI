@@ -26,21 +26,21 @@ export default function Home() {
             <ThemeToggle />
             <Link
               href="/knowledge-stacks"
-              className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#36322F] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 h-10 px-4 py-2 font-medium gap-2"
+              className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-background border border-border text-foreground hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 font-medium gap-2"
             >
               <Database className="w-4 h-4" />
               Knowledge Stacks
             </Link>
             <Link
               href="/history"
-              className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#36322F] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 h-10 px-4 py-2 font-medium gap-2"
+              className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-background border border-border text-foreground hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 font-medium gap-2"
             >
               <History className="w-4 h-4" />
               History
             </Link>
             <Link
               href="/settings"
-              className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#36322F] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 h-10 px-4 py-2 font-medium gap-2"
+              className="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none rounded-[10px] text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-background border border-border text-foreground hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 font-medium gap-2"
             >
               <Settings className="w-4 h-4" />
               Settings
@@ -71,7 +71,7 @@ export default function Home() {
               Deep Research Agent
             </span>
           </h1>
-          <p className="mt-6 text-lg text-zinc-600 dark:text-zinc-400 opacity-0 animate-fade-up [animation-duration:500ms] [animation-delay:600ms] [animation-fill-mode:forwards]">
+          <p className="mt-6 text-lg text-muted-foreground opacity-0 animate-fade-up [animation-duration:500ms] [animation-delay:600ms] [animation-fill-mode:forwards]">
             Intelligent multi-source research powered by Firecrawl, Tavily, and advanced AI
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="px-4 sm:px-6 lg:px-8 py-8 mt-auto">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Powered by{' '}
             <a
               href="https://firecrawl.dev"

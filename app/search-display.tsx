@@ -48,8 +48,8 @@ function AnimatedThinkingLine({ messages }: { messages: string[] }) {
   const currentUrl = analyzingMatch ? analyzingMatch[1] : null;
   
   return (
-    <div className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-      <div className="w-5 h-5 mt-0.5 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+    <div className="flex items-start gap-3 text-foreground">
+      <div className="w-5 h-5 mt-0.5 rounded bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
         {currentUrl ? (
           <Image 
             src={getFaviconUrl(currentUrl)} 
@@ -118,7 +118,7 @@ function FoundSourcesGroup({
             aria-label={isExpanded ? "Collapse sources" : "Expand sources"}
           >
             <svg 
-              className={`w-3 h-3 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
+              className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -202,11 +202,11 @@ function SourceProcessingLine({ url, stage, summary }: {
         <div className={`font-medium truncate ${
           isKnowledgeStack 
             ? 'text-orange-600 dark:text-orange-400' 
-            : 'text-gray-600 dark:text-gray-400'
+            : 'text-muted-foreground'
         }`}>
           {displayName}
           {isKnowledgeStack && (
-            <span className="text-xs text-gray-500 dark:text-gray-500 ml-1">(Knowledge Stack)</span>
+            <span className="text-xs text-muted-foreground ml-1">(Knowledge Stack)</span>
           )}
         </div>
         {stage === 'complete' ? (
@@ -473,10 +473,10 @@ export function SearchDisplay({ events }: { events: SearchEvent[] }) {
           <div className="p-4 pb-2">
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Complete
                 </h4>
-                <span className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                <span className="text-xs font-mono text-muted-foreground">
                   {formatTime(elapsedSeconds)}
                 </span>
               </div>
