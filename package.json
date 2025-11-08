@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check:deployment": "node scripts/check-deployment-readiness.js",
     "benchmark": "tsx eval/benchmark-runner.ts",
     "benchmark:quick": "tsx eval/benchmark-runner.ts factual_queries",
     "test:firecrawl": "tsx eval/test-firecrawl-simple.ts"

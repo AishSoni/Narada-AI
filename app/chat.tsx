@@ -6,6 +6,7 @@ import { searchWithKnowledge } from './search-with-knowledge';
 import { readStreamableValue } from 'ai/rsc';
 import { SearchDisplay } from './search-display';
 import { SearchEvent, Source } from '@/lib/langgraph-search-engine';
+import { KnowledgeStack } from '@/lib/knowledge-stack-store';
 import { MarkdownRenderer } from './markdown-renderer';
 import { CitationTooltip } from './citation-tooltip';
 import Image from 'next/image';
@@ -355,7 +356,7 @@ export function Chat() {
         
         // Validate current selection
         if (selectedKnowledgeStack !== 'web-only') {
-          const currentStackExists = stacks.some((stack: any) => stack.id === selectedKnowledgeStack);
+          const currentStackExists = stacks.some((stack: KnowledgeStack) => stack.id === selectedKnowledgeStack);
           if (!currentStackExists) {
             console.warn(`Currently selected knowledge stack ${selectedKnowledgeStack} no longer exists. Resetting to web-only.`);
             setSelectedKnowledgeStack('web-only');

@@ -11,7 +11,7 @@ export interface SearchResult {
     pageCount?: number;
     wordCount?: number;
     fileType?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -177,7 +177,7 @@ function isStopWord(word: string): boolean {
 }
 
 // Rank documents by relevance to query
-export function rankDocuments(documents: Array<{id: string; content?: string; name: string; [key: string]: any}>, query: string): SearchResult[] {
+export function rankDocuments(documents: Array<{id: string; content?: string; name: string; [key: string]: unknown}>, query: string): SearchResult[] {
   const results: SearchResult[] = [];
   
   for (const doc of documents) {
@@ -196,7 +196,7 @@ export function rankDocuments(documents: Array<{id: string; content?: string; na
         score,
         content: doc.content,
         snippet,
-        metadata: doc.metadata
+        metadata: (doc.metadata as SearchResult['metadata']) || undefined
       });
     }
   }
@@ -208,7 +208,7 @@ export function rankDocuments(documents: Array<{id: string; content?: string; na
 }
 
 // Hybrid search that combines keyword and semantic similarity
-export function hybridSearch(documents: Array<{id: string; content?: string; name: string; [key: string]: any}>, query: string, limit: number = 5): SearchResult[] {
+export function hybridSearch(documents: Array<{id: string; content?: string; name: string; [key: string]: unknown}>, query: string, limit: number = 5): SearchResult[] {
   const rankedResults = rankDocuments(documents, query);
   
   // Apply additional boost for title/filename matches

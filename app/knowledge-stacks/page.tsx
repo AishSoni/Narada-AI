@@ -104,7 +104,7 @@ export default function KnowledgeStacksPage() {
         const error = await response.text();
         toast.error(error || 'Failed to create knowledge stack');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to create knowledge stack');
     } finally {
       setLoading(false);
@@ -131,7 +131,7 @@ export default function KnowledgeStacksPage() {
       } else {
         toast.error('Failed to delete knowledge stack');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete knowledge stack');
     }
   };
@@ -164,7 +164,7 @@ export default function KnowledgeStacksPage() {
         const error = await response.text();
         toast.error(error || 'Failed to upload documents');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to upload documents');
     } finally {
       setLoading(false);
@@ -188,7 +188,7 @@ export default function KnowledgeStacksPage() {
       } else {
         toast.error('Failed to delete document');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete document');
     }
   };

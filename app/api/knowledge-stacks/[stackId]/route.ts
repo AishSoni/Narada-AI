@@ -28,10 +28,10 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { stackId: string } }
+  { params }: { params: Promise<{ stackId: string }> }
 ) {
   try {
-    const stackId = params.stackId;
+    const { stackId } = await params;
     
     const stack = knowledgeStackStore.getStackById(stackId);
     if (!stack) {

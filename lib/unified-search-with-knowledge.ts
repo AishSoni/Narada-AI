@@ -1,4 +1,4 @@
-import { LangGraphSearchEngine, SearchEvent, ExtractedQuery } from './langgraph-search-engine';
+import { LangGraphSearchEngine, SearchEvent, ExtractedQuery, Source } from './langgraph-search-engine';
 import { UnifiedSearchClient } from './unified-search-client';
 import { knowledgeStackStore } from './knowledge-stack-store';
 import { SearchResult } from './search-engine';
@@ -7,46 +7,6 @@ interface KnowledgeSearchResponse {
   results: SearchResult[];
   totalFound: number;
   stackName: string;
-}
-
-function extractSnippet(content: string, query: string, maxLength = 200): string {
-  const queryWords = query.toLowerCase().split(/\s+/).filter((word: string) => word.length > 2);
-  
-  // Find the best position to extract snippet from
-  let bestPosition = 0;
-  let bestScore = 0;
-  
-  for (let i = 0; i < content.length - maxLength; i += 50) {
-    const snippet = content.substring(i, i + maxLength).toLowerCase();
-    let score = 0;
-    
-    for (const word of queryWords) {
-      if (snippet.includes(word)) {
-        score += 1;
-      }
-    }
-    
-    if (score > bestScore) {
-      bestScore = score;
-      bestPosition = i;
-    }
-  }
-  
-  let snippet = content.substring(bestPosition, bestPosition + maxLength);
-  
-  // Try to start at a word boundary
-  const firstSpace = snippet.indexOf(' ');
-  if (firstSpace > 0 && firstSpace < 50) {
-    snippet = snippet.substring(firstSpace + 1);
-  }
-  
-  // Try to end at a word boundary
-  const lastSpace = snippet.lastIndexOf(' ');
-  if (lastSpace > maxLength - 50) {
-    snippet = snippet.substring(0, lastSpace);
-  }
-  
-  return snippet.trim() + (bestPosition + maxLength < content.length ? '...' : '');
 }
 
 async function searchKnowledgeStack(stackId: string, query: string): Promise<KnowledgeSearchResponse> {
@@ -207,7 +167,7 @@ export async function unifiedSearchWithKnowledge(
     }
 
     // Perform web search using the same extracted search terms
-    let webSources: any[] = [];
+    let webSources: Source[] = [];
     let finalAnswer = '';
 
     const wrappedOnEvent = (event: SearchEvent) => {

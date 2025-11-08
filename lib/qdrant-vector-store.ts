@@ -8,7 +8,7 @@ export interface VectorDocument {
   documentId: string;
   content: string;
   embedding: number[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface VectorSearchResult {
@@ -16,10 +16,18 @@ export interface VectorSearchResult {
   documentId: string;
   score: number;
   content: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
-export class QdrantVectorStore {
+// Interface for advanced vector store features
+export interface AdvancedVectorStore {
+  healthCheck(): Promise<boolean>;
+  getCollectionInfo(): Promise<unknown>;
+  removeStack(stackId: string): Promise<void>;
+  isEmbeddingAvailable(): boolean;
+}
+
+export class QdrantVectorStore implements AdvancedVectorStore {
   private client: QdrantClient;
   private embeddingClient: UnifiedEmbeddingClient | null = null;
   private collectionName: string;
@@ -82,7 +90,7 @@ export class QdrantVectorStore {
             const testEmbedding = await this.embeddingClient.embedText('test');
             vectorSize = testEmbedding.length;
             console.log(`Auto-detected embedding dimension: ${vectorSize}`);
-          } catch (error) {
+          } catch {
             console.warn('Failed to auto-detect embedding dimension, using default:', vectorSize);
           }
         } else {
@@ -118,7 +126,7 @@ export class QdrantVectorStore {
   }
 
   // Add a document with embeddings to the vector store
-  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, any>): Promise<string[]> {
+  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, unknown>): Promise<string[]> {
     if (!this.embeddingClient) {
       throw new Error('Embedding client not available. Please configure embedding provider.');
     }
@@ -290,7 +298,7 @@ export class QdrantVectorStore {
   }
 
   // Get collection info
-  async getCollectionInfo(): Promise<any> {
+  async getCollectionInfo(): Promise<unknown> {
     try {
       return await this.client.getCollection(this.collectionName);
     } catch (error) {

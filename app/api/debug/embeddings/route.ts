@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { vectorStore } from '@/lib/vector-store';
 import { UnifiedEmbeddingClient } from '@/lib/unified-embedding-client';
 import { getAppConfig } from '@/lib/app-config';
@@ -6,7 +6,20 @@ import { getAppConfig } from '@/lib/app-config';
 export async function GET() {
   try {
     const config = getAppConfig();
-    const embeddingStatus = vectorStore.getEmbeddingStatus();
+    
+    // Check embedding status based on vector store type
+    let embeddingStatus;
+    if ('getEmbeddingStatus' in vectorStore) {
+      embeddingStatus = (vectorStore as import('@/lib/vector-store').InMemoryVectorStoreInterface).getEmbeddingStatus();
+    } else {
+      // For QdrantVectorStore, check if embedding is available
+      embeddingStatus = {
+        available: 'isEmbeddingAvailable' in vectorStore ? 
+          (vectorStore as import('@/lib/qdrant-vector-store').AdvancedVectorStore).isEmbeddingAvailable() : 
+          false,
+        provider: config.embeddingProvider
+      };
+    }
     
     // Try to create a new embedding client to test configuration
     let testClientStatus = null;
@@ -53,7 +66,9 @@ export async function GET() {
       vectorStoreStatus: embeddingStatus,
       testClientStatus,
       embeddingTestResult,
-      vectorStoreStats: vectorStore.getStats()
+      vectorStoreStats: 'getStats' in vectorStore ? 
+        (vectorStore as import('@/lib/vector-store').InMemoryVectorStoreInterface).getStats() : 
+        { totalVectors: 0, stacks: [], documents: [] }
     });
   } catch (error) {
     console.error('Debug endpoint error:', error);

@@ -8,6 +8,7 @@ export async function searchWithKnowledge(
   query: string, 
   context?: Array<{ query: string; response: string }>,
   knowledgeStackId?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _firecrawlApiKey?: string
 ) {
   const stream = createStreamableValue<SearchEvent>();

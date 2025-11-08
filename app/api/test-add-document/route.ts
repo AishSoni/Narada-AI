@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { knowledgeStackStore } from '@/lib/knowledge-stack-store';
 import { v4 as uuidv4 } from 'uuid';
 

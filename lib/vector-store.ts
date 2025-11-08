@@ -10,7 +10,7 @@ export interface VectorDocument {
   documentId: string;
   content: string;
   embedding: number[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface VectorSearchResult {
@@ -18,11 +18,24 @@ export interface VectorSearchResult {
   documentId: string;
   score: number;
   content: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
+}
+
+// Interface for in-memory vector store stats
+interface VectorStoreStats {
+  totalVectors: number;
+  stacks: string[];
+  documents: string[];
+}
+
+// Interface for in-memory vector store features
+export interface InMemoryVectorStoreInterface {
+  getStats(): VectorStoreStats;
+  getEmbeddingStatus(): { available: boolean; provider?: string; error?: string };
 }
 
 // In-memory vector store implementation (fallback)
-class InMemoryVectorStore {
+class InMemoryVectorStore implements InMemoryVectorStoreInterface {
   private vectors: VectorDocument[] = [];
   private embeddingClient: UnifiedEmbeddingClient | null = null;
 
@@ -41,7 +54,7 @@ class InMemoryVectorStore {
   }
 
   // Add a document with embeddings to the vector store
-  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, any>): Promise<string[]> {
+  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, unknown>): Promise<string[]> {
     if (!this.embeddingClient) {
       throw new Error('Embedding client not available. Please configure embedding provider.');
     }
@@ -214,7 +227,7 @@ class InMemoryVectorStore {
   }
 
   // Get statistics about the vector store
-  getStats(): { totalVectors: number; stacks: string[]; documents: string[] } {
+  getStats(): VectorStoreStats {
     const stacks = [...new Set(this.vectors.map(v => v.stackId))];
     const documents = [...new Set(this.vectors.map(v => v.documentId))];
     

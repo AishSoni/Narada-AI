@@ -3,7 +3,6 @@ import { knowledgeStackStore } from '@/lib/knowledge-stack-store';
 
 function extractSnippet(content: string, query: string, maxLength = 200): string {
   const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-  const contentLower = content.toLowerCase();
   
   // Find the best position to extract snippet from
   let bestPosition = 0;

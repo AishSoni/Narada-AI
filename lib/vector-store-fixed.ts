@@ -9,7 +9,7 @@ export interface VectorDocument {
   documentId: string;
   content: string;
   embedding: number[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface VectorSearchResult {
@@ -17,7 +17,7 @@ export interface VectorSearchResult {
   documentId: string;
   score: number;
   content: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export class VectorStore {
@@ -39,7 +39,7 @@ export class VectorStore {
   }
 
   // Add a document with embeddings to the vector store
-  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, any>): Promise<string[]> {
+  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, unknown>): Promise<string[]> {
     if (!this.embeddingClient) {
       throw new Error('Embedding client not available. Please configure embedding provider.');
     }

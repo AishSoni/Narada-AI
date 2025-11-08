@@ -30,7 +30,7 @@ async function readEnvFile(): Promise<Record<string, string>> {
     });
     
     return env;
-  } catch (error) {
+  } catch {
     // If file doesn't exist, return empty object
     return {};
   }

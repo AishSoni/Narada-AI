@@ -5,20 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Monitor, Moon, Sun, Palette, Clock } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
-import { THEME_CONFIG } from "@/lib/config"
 
 export function ThemeSettings() {
   const { theme, setTheme, resolvedTheme } = useTheme()
 
-  // Function to determine theme based on current time
-  const getTimeBasedTheme = (): 'dark' | 'light' => {
-    const hour = new Date().getHours()
-    return hour >= THEME_CONFIG.AUTO_DARK_START_HOUR || hour < THEME_CONFIG.AUTO_DARK_END_HOUR ? 'dark' : 'light'
-  }
-
   const getCurrentStatus = () => {
     if (theme === 'auto') {
-      const timeBasedTheme = getTimeBasedTheme()
       const currentTime = new Date().toLocaleTimeString('en-US', { 
         hour: 'numeric', 
         minute: '2-digit',

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { knowledgeStackStore } from '@/lib/knowledge-stack-store';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -78,7 +78,7 @@ This document provides a comprehensive overview of artificial intelligence and m
     console.log('Added document:', testDocument.id);
 
     // Test search functionality
-    const searchResults = knowledgeStackStore.searchDocuments(newStack.id, 'machine learning', 5);
+    const searchResults = await knowledgeStackStore.searchDocuments(newStack.id, 'machine learning', 5);
     console.log('Search results:', searchResults.length);
 
     return NextResponse.json({

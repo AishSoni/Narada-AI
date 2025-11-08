@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedSearchClient } from '@/lib/unified-search-client';
+
+interface SearchResultItem {
+  title: string;
+  url: string;
+  description?: string;
+}
+
+interface SearchResponse {
+  data?: SearchResultItem[];
+}
 import { TavilyClient } from '@/lib/tavily';
 import { SerpClient } from '@/lib/serp';
 import { FirecrawlClient } from '@/lib/firecrawl';
@@ -15,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     let client;
-    let results;
+    let results: SearchResponse;
 
     switch (provider) {
       case 'firecrawl':
@@ -66,7 +76,7 @@ export async function POST(request: NextRequest) {
       success: true,
       provider: provider,
       resultCount: results.data?.length || 0,
-      results: results.data?.slice(0, 2).map((r: any) => ({
+      results: results.data?.slice(0, 2).map((r: SearchResultItem) => ({
         title: r.title,
         url: r.url,
         description: r.description?.substring(0, 100) + '...',
@@ -77,11 +87,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Search test error:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Search test failed',
+      error: error instanceof Error ? error.message : 'Search test failed',
     }, { status: 500 });
   }
 }

@@ -2,7 +2,7 @@
 // In production, this would be replaced with a proper database
 
 import { hybridSearch, SearchResult } from './search-engine';
-import { vectorStore, VectorSearchResult } from './vector-store';
+import { vectorStore } from './vector-store';
 import { chunkText } from './text-extraction';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,6 +18,7 @@ export interface KnowledgeStack {
 }
 
 export interface Document {
+  [key: string]: unknown;
   id: string;
   stackId: string;
   name: string;
@@ -122,7 +123,7 @@ class KnowledgeStackStore {
     
     // Remove all vectors for this stack
     if ('removeStack' in vectorStore) {
-      (vectorStore as any).removeStack(id);
+      (vectorStore as import('./qdrant-vector-store').AdvancedVectorStore).removeStack(id);
     }
     
     this.saveToDisk();
@@ -154,7 +155,7 @@ class KnowledgeStackStore {
   }
 
   private async generateDocumentEmbeddings(document: Document): Promise<void> {
-    if (!document.content || !(vectorStore as any).isEmbeddingAvailable?.()) {
+    if (!document.content || !('isEmbeddingAvailable' in vectorStore) || !(vectorStore as import('./qdrant-vector-store').AdvancedVectorStore).isEmbeddingAvailable()) {
       console.log('Skipping embedding generation - no content or embedding service unavailable');
       return;
     }
@@ -219,7 +220,7 @@ class KnowledgeStackStore {
     let results: SearchResult[] = [];
 
     // Try vector search first if embeddings are available
-    if ((vectorStore as any).isEmbeddingAvailable?.()) {
+    if ('isEmbeddingAvailable' in vectorStore && (vectorStore as import('./qdrant-vector-store').AdvancedVectorStore).isEmbeddingAvailable()) {
       try {
         console.log(`Performing vector search for query: "${query}"`);
         const vectorResults = await vectorStore.searchSimilar(stackId, query, limit * 2, 0.7);
@@ -230,7 +231,7 @@ class KnowledgeStackStore {
             const doc = this.documents.find(d => d.id === vr.documentId);
             return {
               id: vr.documentId,
-              name: vr.metadata.name,
+              name: (vr.metadata.name as string) || doc?.name || 'Unknown Document',
               score: vr.score,
               content: doc?.content || '',
               snippet: this.extractSnippet(vr.content, query),
@@ -254,7 +255,6 @@ class KnowledgeStackStore {
   // Extract a relevant snippet from content
   private extractSnippet(content: string, query: string, maxLength = 200): string {
     const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-    const contentLower = content.toLowerCase();
     
     // Find the best position to extract snippet from
     let bestPosition = 0;

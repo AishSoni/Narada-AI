@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vectorStore } from '@/lib/vector-store';
 
+// Interface for collection info structure
+interface CollectionInfo {
+  config?: {
+    params?: {
+      vectors?: {
+        size?: number;
+        distance?: string;
+      };
+    };
+  };
+  points_count?: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { text } = await request.json();
@@ -36,14 +49,14 @@ export async function POST(request: NextRequest) {
     
     // Clean up test data
     if ('removeStack' in vectorStore) {
-      await (vectorStore as any).removeStack(testStackId);
+      await (vectorStore as import('@/lib/qdrant-vector-store').AdvancedVectorStore).removeStack(testStackId);
       console.log('Test data cleaned up');
     }
     
     // Get collection info if available
     let collectionInfo = null;
     if ('getCollectionInfo' in vectorStore) {
-      collectionInfo = await (vectorStore as any).getCollectionInfo();
+      collectionInfo = await (vectorStore as import('@/lib/qdrant-vector-store').AdvancedVectorStore).getCollectionInfo();
     }
 
     return NextResponse.json({
@@ -53,9 +66,9 @@ export async function POST(request: NextRequest) {
         searchResults: searchResults.length,
         embeddingDimensions: process.env.EMBEDDING_DIMENSIONS || 'not configured',
         collectionInfo: collectionInfo ? {
-          vectorSize: collectionInfo.config?.params?.vectors?.size,
-          distance: collectionInfo.config?.params?.vectors?.distance,
-          pointsCount: collectionInfo.points_count
+          vectorSize: (collectionInfo as CollectionInfo)?.config?.params?.vectors?.size,
+          distance: (collectionInfo as CollectionInfo)?.config?.params?.vectors?.distance,
+          pointsCount: (collectionInfo as CollectionInfo)?.points_count
         } : null
       }
     });

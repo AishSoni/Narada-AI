@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ChatOpenAI } from "@langchain/openai";
 import { Ollama } from "@langchain/community/llms/ollama";
 import { getAppConfig } from './app-config';
@@ -14,12 +13,14 @@ export interface LLMProviderConfig {
   streaming?: boolean;
 }
 
+type LLMModel = ChatOpenAI | Ollama;
+
 export class UnifiedLLMClient {
   private provider: string;
   private config: LLMProviderConfig;
-  private fastModel: any = null;
-  private qualityModel: any = null;
-  private streamingModel: any = null;
+  private fastModel: LLMModel | null = null;
+  private qualityModel: LLMModel | null = null;
+  private streamingModel: LLMModel | null = null;
 
   constructor(overrideConfig?: Partial<LLMProviderConfig>) {
     const appConfig = getAppConfig();
@@ -168,14 +169,14 @@ export class UnifiedLLMClient {
     return this.fastModel;
   }
 
-  getQualityModel(): any {
+  getQualityModel(): LLMModel {
     if (!this.qualityModel) {
       throw new Error(`Quality model not initialized for provider: ${this.provider}`);
     }
     return this.qualityModel;
   }
 
-  getStreamingModel(): any {
+  getStreamingModel(): LLMModel {
     if (!this.streamingModel) {
       throw new Error(`Streaming model not initialized for provider: ${this.provider}`);
     }

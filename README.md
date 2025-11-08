@@ -5,6 +5,11 @@
   <img src="public/assets/twemoji-fire.svg" alt="Narada AI" width="64" height="64" />
   <h2>🔍 Intelligent Multi-Source Research</h2>
   <p><strong>Narada AI Deep Research Agent</strong> – A powerful, locally-run research assistant that combines agentic web search, local knowledge bases, and extensible tool support.</p>
+  
+  <p>
+    <a href="QUICK_DEPLOY.md"><strong>🚀 Quick Deploy to Vercel</strong></a> •
+    <a href="VERCEL_DEPLOYMENT.md"><strong>📖 Full Deployment Guide</strong></a>
+  </p>
 </div>
 
 Welcome to **Narada AI Deep Research Agent** – your comprehensive research companion powered by [Firecrawl](https://www.firecrawl.dev/), [Tavily](https://tavily.com), and advanced AI orchestration.

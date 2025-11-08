@@ -71,7 +71,7 @@ async function readEnvFile(): Promise<Record<string, string>> {
     });
     
     return env;
-  } catch (error) {
+  } catch {
     // If file doesn't exist, return empty object
     return {};
   }
@@ -79,7 +79,7 @@ async function readEnvFile(): Promise<Record<string, string>> {
 
 async function writeEnvFile(env: Record<string, string>): Promise<void> {
   const lines = Object.entries(env)
-    .filter(([_, value]) => value !== '') // Only write non-empty values
+    .filter(([, value]) => value !== '') // Only write non-empty values
     .map(([key, value]) => `${key}="${value}"`)
     .join('\n');
   

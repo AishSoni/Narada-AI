@@ -7,6 +7,33 @@ interface ModelInfo {
   created?: number;
 }
 
+interface OpenAIModel {
+  id: string;
+  created: number;
+  owned_by: string;
+  object: string;
+}
+
+interface OllamaModel {
+  name: string;
+  size: number;
+  modified_at: string;
+}
+
+interface OllamaModelsResponse {
+  models: OllamaModel[];
+}
+
+interface OpenRouterModel {
+  id: string;
+  description?: string;
+  context_length?: number;
+}
+
+interface OpenRouterModelsResponse {
+  data: OpenRouterModel[];
+}
+
 async function getOpenAIModels(apiKey: string): Promise<ModelInfo[]> {
   try {
     // Validate API key format
@@ -26,19 +53,19 @@ async function getOpenAIModels(apiKey: string): Promise<ModelInfo[]> {
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: { data: OpenAIModel[] } = await response.json();
     
     // Filter to only include GPT models and sort by creation date (newest first)
     return data.data
-      .filter((model: any) => model.id.includes('gpt'))
-      .map((model: any) => ({
+      .filter((model: OpenAIModel) => model.id.includes('gpt'))
+      .map((model: OpenAIModel) => ({
         id: model.id,
         name: model.id,
         description: `Created: ${new Date(model.created * 1000).toLocaleDateString()}`,
         created: model.created
       }))
       .sort((a: ModelInfo, b: ModelInfo) => (b.created || 0) - (a.created || 0));
-  } catch (error) {
+  } catch {
     // Return fallback models if API fails
     return [
       { id: 'gpt-4o', name: 'gpt-4o', description: 'Latest flagship model' },
@@ -82,14 +109,14 @@ async function getOllamaModels(apiUrl: string): Promise<ModelInfo[]> {
       throw new Error(`Ollama API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: OllamaModelsResponse = await response.json();
     
-    return data.models?.map((model: any) => ({
+    return data.models?.map((model: OllamaModel) => ({
       id: model.name.split(':')[0], // Remove tag (e.g., ":latest")
       name: model.name.split(':')[0],
       description: `Size: ${(model.size / 1024 / 1024 / 1024).toFixed(1)}GB, Modified: ${new Date(model.modified_at).toLocaleDateString()}`,
     })) || [];
-  } catch (error) {
+  } catch {
     // Return fallback models if API fails
     return [
       { id: 'llama3.2', name: 'llama3.2', description: 'Latest Llama model' },
@@ -117,9 +144,9 @@ async function getOpenRouterModels(apiKey: string): Promise<ModelInfo[]> {
       throw new Error(`OpenRouter API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: OpenRouterModelsResponse = await response.json();
     
-    return data.data?.map((model: any) => ({
+    return data.data?.map((model: OpenRouterModel) => ({
       id: model.id,
       name: model.id,
       description: model.description || `Context: ${model.context_length || 'Unknown'}`,

@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { vectorStore } from '@/lib/vector-store';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Check if vector store has a health check method (Qdrant implementation)
     if ('healthCheck' in vectorStore) {
-      const isHealthy = await (vectorStore as any).healthCheck();
+      const isHealthy = await (vectorStore as import('@/lib/qdrant-vector-store').AdvancedVectorStore).healthCheck();
       
       const collectionInfo = 'getCollectionInfo' in vectorStore 
-        ? await (vectorStore as any).getCollectionInfo()
+        ? await (vectorStore as import('@/lib/qdrant-vector-store').AdvancedVectorStore).getCollectionInfo()
         : null;
       
       return NextResponse.json({
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     } else {
       // In-memory store
       const stats = 'getStats' in vectorStore 
-        ? (vectorStore as any).getStats()
+        ? (vectorStore as import('@/lib/vector-store').InMemoryVectorStoreInterface).getStats()
         : { totalVectors: 0, stacks: [], documents: [] };
       
       return NextResponse.json({

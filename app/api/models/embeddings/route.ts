@@ -7,6 +7,35 @@ interface EmbeddingModelInfo {
   dimensions?: number;
 }
 
+interface OpenAIModel {
+  id: string;
+  created: number;
+  owned_by: string;
+  object: string;
+}
+
+interface OllamaModel {
+  name: string;
+  size: number;
+  modified_at: string;
+}
+
+interface OllamaModelsResponse {
+  models: OllamaModel[];
+}
+
+interface CohereModel {
+  name: string;
+  endpoints?: string[];
+  context_length?: number;
+  description?: string;
+  embed_dimension?: number;
+}
+
+interface CohereModelsResponse {
+  models: CohereModel[];
+}
+
 async function getOpenAIEmbeddingModels(apiKey: string): Promise<EmbeddingModelInfo[]> {
   try {
     // Validate API key format
@@ -30,12 +59,12 @@ async function getOpenAIEmbeddingModels(apiKey: string): Promise<EmbeddingModelI
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: { data: OpenAIModel[] } = await response.json();
     
     // Filter to only include embedding models
     const embeddingModels = data.data
-      .filter((model: any) => model.id.includes('embedding'))
-      .map((model: any) => ({
+      .filter((model: OpenAIModel) => model.id.includes('embedding'))
+      .map((model: OpenAIModel) => ({
         id: model.id,
         name: model.id,
         description: `Created: ${new Date(model.created * 1000).toLocaleDateString()}`,
@@ -43,7 +72,11 @@ async function getOpenAIEmbeddingModels(apiKey: string): Promise<EmbeddingModelI
                    model.id.includes('text-embedding-3-large') ? 3072 : 
                    model.id.includes('ada-002') ? 1536 : undefined
       }))
-      .sort((a: any, b: any) => b.created - a.created);
+      .sort((a: EmbeddingModelInfo, b: EmbeddingModelInfo) => {
+        const aCreated = data.data.find(m => m.id === a.id)?.created || 0;
+        const bCreated = data.data.find(m => m.id === b.id)?.created || 0;
+        return bCreated - aCreated;
+      });
 
     // If no embedding models found in API response, return fallback models
     if (embeddingModels.length === 0) {
@@ -97,18 +130,18 @@ async function getOllamaEmbeddingModels(apiUrl: string): Promise<EmbeddingModelI
       throw new Error(`Ollama API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: OllamaModelsResponse = await response.json();
     
     // Filter to models that are typically used for embeddings
     const embeddingKeywords = ['embed', 'nomic', 'mxbai', 'minilm', 'arctic'];
     
     const embeddingModels = data.models
-      ?.filter((model: any) => 
+      ?.filter((model: OllamaModel) => 
         embeddingKeywords.some(keyword => 
           model.name.toLowerCase().includes(keyword)
         )
       )
-      .map((model: any) => ({
+      .map((model: OllamaModel) => ({
         id: model.name.split(':')[0], // Remove tag
         name: model.name.split(':')[0],
         description: `Size: ${(model.size / 1024 / 1024 / 1024).toFixed(1)}GB, Modified: ${new Date(model.modified_at).toLocaleDateString()}`,
@@ -169,18 +202,18 @@ async function getCohereEmbeddingModels(apiKey: string): Promise<EmbeddingModelI
       throw new Error(`Cohere API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: CohereModelsResponse = await response.json();
     
     // Filter to only include embedding models
     const embeddingModels = data.models
-      ?.filter((model: any) => model.endpoints?.includes('embed') || model.name.includes('embed'))
-      .map((model: any) => ({
+      ?.filter((model: CohereModel) => model.endpoints?.includes('embed') || model.name.includes('embed'))
+      .map((model: CohereModel) => ({
         id: model.name,
         name: model.name,
         description: model.description || `Context length: ${model.context_length || 'N/A'}`,
         dimensions: model.embed_dimension || undefined
       }))
-      .sort((a: any, b: any) => a.name.localeCompare(b.name)) || [];
+      .sort((a: EmbeddingModelInfo, b: EmbeddingModelInfo) => a.name.localeCompare(b.name)) || [];
 
     // If no embedding models found in API response, return fallback models
     if (embeddingModels.length === 0) {
