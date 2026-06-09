@@ -1,4 +1,4 @@
-import { Chat } from './chat';
+import { Chat } from '@/components/chat/chat';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Settings, History, Database } from 'lucide-react';

@@ -141,7 +141,7 @@ function main() {
   } else if (!allRequiredPresent) {
     log('\n❌ DEPLOYMENT NOT READY - Missing required configuration!', 'red');
     log('\nPlease fix the issues marked with ❌ above.', 'red');
-    log('Refer to VERCEL_DEPLOYMENT.md for detailed instructions.\n', 'yellow');
+    log('Refer to docs/deployment/QUICK_DEPLOY.md for detailed instructions.\n', 'yellow');
     process.exit(1);
   } else {
     log('\n⚠️  DEPLOYMENT READY (with warnings)', 'yellow');

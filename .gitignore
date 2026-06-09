@@ -39,9 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# docs
-DEPLOY.md
-DEPLOYMENT_CHECKLIST.md
-QUICK_DEPLOY.md
-VERCEL_DEPLOYMENT.md

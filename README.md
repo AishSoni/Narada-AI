@@ -7,8 +7,8 @@
   <p><strong>Narada AI Deep Research Agent</strong> – A powerful, locally-run research assistant that combines agentic web search, local knowledge bases, and extensible tool support.</p>
   
   <p>
-    <a href="QUICK_DEPLOY.md"><strong>🚀 Quick Deploy to Vercel</strong></a> •
-    <a href="VERCEL_DEPLOYMENT.md"><strong>📖 Full Deployment Guide</strong></a>
+    <a href="docs/deployment/QUICK_DEPLOY.md"><strong>🚀 Deploy to Vercel</strong></a> •
+    <a href="docs/README.md"><strong>📖 Documentation</strong></a>
   </p>
 </div>
 
@@ -29,6 +29,8 @@ Welcome to **Narada AI Deep Research Agent** – your comprehensive research com
 - **📊 Real-time Progress**: Live updates as searches complete with detailed status
 - **📖 Full Citations**: Every fact linked to its source with transparent attribution
 - **💭 Context Memory**: Follow-up questions maintain conversation context across sessions
+- **📜 Chat History**: Conversations auto-save to local storage; browse, search, and resume from `/history`
+- **🌗 Theme Support**: Light, dark, and time-based auto themes via the header toggle or `/settings`
 
 ## 🏗️ Architecture
 
@@ -266,29 +268,24 @@ Configure all integrations through the **Settings page** (click the Settings but
 
 ```
 narada-ai/
-├── app/                    # Next.js app directory
-│   ├── api/                # API routes for backend logic
-│   │   ├── search/         # Search endpoint handlers
-│   │   └── check-env/      # Environment validation
-│   ├── chat.tsx            # Main chat interface
-│   ├── search.tsx          # Search functionality
-│   └── layout.tsx          # App layout and structure
+├── app/                    # Next.js app directory (pages, layout, API routes)
+│   ├── api/                # Backend API routes
+│   ├── history/            # Chat history page
+│   ├── knowledge-stacks/   # Knowledge stack management
+│   └── settings/           # Settings page
 ├── components/             # React components
-│   ├── ui/                 # Base UI components (shadcn/ui)
-│   │   ├── button.tsx      # Button component
-│   │   ├── input.tsx       # Input component
-│   │   └── ...             # Other UI primitives
-├── lib/                    # Core libraries and utilities
-│   ├── langgraph-search-engine.ts  # LangGraph search orchestration
-│   ├── firecrawl.ts        # Firecrawl integration
-│   ├── config.ts           # Configuration constants
-│   ├── context-processor.ts# Context processing utilities
-│   └── utils.ts            # General utilities
+│   ├── chat/               # Chat UI, citations, markdown rendering
+│   ├── search/             # Server-side search actions
+│   └── ui/                 # shadcn/ui primitives
+├── lib/                    # Core libraries (search, embeddings, vector store)
 ├── hooks/                  # React hooks
-│   └── use-mobile.ts       # Mobile detection hook
+├── scripts/                # Utility scripts (deployment check, stack ID fixer)
+├── fixtures/               # Sample test data
+├── docs/                   # Deployment and Docker guides
+├── legacy/                 # Superseded code and archived docs (reference only)
 ├── public/                 # Static assets
-│   └── assets/             # Image and icon assets
-└── docs/                   # Documentation files
+├── docker-compose.yml      # Production Docker stack
+└── env.example             # Environment variable template
 ```
 
 ### Adding New Features
@@ -370,16 +367,11 @@ npm run dev
 pnpm dev
 ```
 
-## Architectural Plan & Design Documents
+## Documentation
 
-The entire project has been planned in detail. You can find the complete architectural and design documents in the `docs/` directory:
-
-1.  **[High-Level Architecture](docs/architecture.md)**: An overview of the system's components and their interactions.
-2.  **[UI/UX Design](docs/ui-ux-design.md)**: A detailed look at the user interface, inspired by Grok's "DeepSearch" mode.
-3.  **[Backend API Design](docs/backend-api-design.md)**: The specification for the Next.js API routes that will power the application.
-4.  **[Core Agent Workflow](docs/agent-workflow.md)**: A description of the internal logic of the Narada AI agent.
-5.  **[Knowledge Base Plan](docs/knowledge-base-plan.md)**: The plan for implementing the local knowledge base feature with Qdrant.
-6.  **[Project Setup Guide](docs/project-setup.md)**: Instructions for setting up the development environment and getting the project running.
+- **[docs/README.md](docs/README.md)** — index of deployment and Docker guides
+- **[docs/deployment/QUICK_DEPLOY.md](docs/deployment/QUICK_DEPLOY.md)** — Vercel deployment quickstart
+- **[docs/docker/README.md](docs/docker/README.md)** — Docker Compose setup
 
 ## Example Queries
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { search } from './search';
-import { searchWithKnowledge } from './search-with-knowledge';
+import { search } from '@/components/search/search';
+import { searchWithKnowledge } from '@/components/search/search-with-knowledge';
 import { readStreamableValue } from 'ai/rsc';
 import { SearchDisplay } from './search-display';
 import { SearchEvent, Source } from '@/lib/langgraph-search-engine';

@@ -3,6 +3,8 @@
 # Knowledge Stack ID Fixer Script
 # This script fixes mismatched knowledge stack IDs
 
+cd "$(dirname "$0")/.." || exit 1
+
 echo "=== Knowledge Stack ID Fix ==="
 
 # Check current stack IDs in the data file
