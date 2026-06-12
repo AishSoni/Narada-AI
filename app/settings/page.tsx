@@ -33,6 +33,7 @@ interface EnvironmentConfig {
   TAVILY_API_KEY: string;
   SERP_API_KEY: string;
   DUCKDUCKGO_API_KEY: string;
+  SEARXNG_API_URL: string;
   
   // LLM Provider
   LLM_PROVIDER: string;
@@ -80,7 +81,8 @@ const SEARCH_PROVIDERS = [
   { value: 'firecrawl', label: 'FireCrawl', description: 'Web scraping and crawling API' },
   { value: 'tavily', label: 'Tavily', description: 'AI search API for research' },
   { value: 'serp', label: 'SERP API', description: 'Google search results API' },
-  { value: 'duckduckgo', label: 'DuckDuckGo', description: 'Offers private searches but has very restricting rate limits.' }
+  { value: 'duckduckgo', label: 'DuckDuckGo', description: 'Offers private searches but has very restricting rate limits.' },
+  { value: 'searxng', label: 'SearXNG', description: 'Self-hosted private metasearch engine' },
 ];
 
 const LLM_PROVIDERS = [
@@ -112,6 +114,7 @@ export default function SettingsPage() {
     TAVILY_API_KEY: '',
     SERP_API_KEY: '',
     DUCKDUCKGO_API_KEY: '',
+    SEARXNG_API_URL: 'http://localhost:8080',
     LLM_PROVIDER: 'openai',
     OPENAI_API_KEY: '',
     OPENAI_LLM_MODEL: 'gpt-4o-mini',
@@ -598,6 +601,20 @@ export default function SettingsPage() {
               {config.SEARCH_API_PROVIDER === 'duckduckgo' && 
                 renderApiKeyInput('DUCKDUCKGO_API_KEY', 'DuckDuckGo API Key', 'ddg-...')
               }
+              {config.SEARCH_API_PROVIDER === 'searxng' && (
+                <div className="space-y-2">
+                  <Label htmlFor="SEARXNG_API_URL">SearXNG Instance URL</Label>
+                  <Input
+                    id="SEARXNG_API_URL"
+                    placeholder="http://localhost:8080"
+                    value={config.SEARXNG_API_URL}
+                    onChange={(e) => updateConfig('SEARXNG_API_URL', e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL of your self-hosted SearXNG instance. JSON format must be enabled in settings.yml.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

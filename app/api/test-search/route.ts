@@ -13,10 +13,11 @@ interface SearchResponse {
 import { TavilyClient } from '@/lib/tavily';
 import { SerpClient } from '@/lib/serp';
 import { FirecrawlClient } from '@/lib/firecrawl';
+import { SearxngClient } from '@/lib/searxng';
 
 export async function POST(request: NextRequest) {
   try {
-    const { provider, apiKey, query } = await request.json();
+    const { provider, apiKey, apiUrl, query } = await request.json();
 
     if (!provider || !query) {
       return NextResponse.json({ 
@@ -60,9 +61,22 @@ export async function POST(request: NextRequest) {
         results = client.formatResults(serpResults);
         break;
 
+      case 'searxng': {
+        const searxngUrl = apiUrl || process.env.SEARXNG_API_URL;
+        if (!searxngUrl) {
+          return NextResponse.json({
+            error: 'SearXNG instance URL is required',
+          }, { status: 400 });
+        }
+        client = new SearxngClient(searxngUrl);
+        const searxngResults = await client.search(query, { max_results: 3 });
+        results = client.formatResults(searxngResults);
+        break;
+      }
+
       case 'unified':
         // Test the unified client
-        client = new UnifiedSearchClient(apiKey);
+        client = new UnifiedSearchClient(apiKey, apiUrl);
         results = await client.search(query);
         break;
 

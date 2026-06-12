@@ -5,6 +5,7 @@ export type ResolvedConfig = AppConfig;
 
 export interface BYOKCredentials {
   searchApiKey?: string;
+  searchApiUrl?: string;
   llmApiKey?: string;
   embeddingApiKey?: string;
   searchProvider?: string;
@@ -26,6 +27,7 @@ export function resolveConfig(byok?: BYOKCredentials): ResolvedConfig {
   return {
     searchProvider: byok.searchProvider || base.searchProvider,
     searchApiKey: byok.searchApiKey || base.searchApiKey,
+    searchApiUrl: byok.searchApiUrl || base.searchApiUrl,
     llmProvider: byok.llmProvider || base.llmProvider,
     llmApiKey: byok.llmApiKey || base.llmApiKey,
     llmApiUrl: byok.llmApiUrl || base.llmApiUrl,
