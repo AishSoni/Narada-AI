@@ -1,49 +1,90 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unifiedSearchWithKnowledge } from '../../../lib/unified-search-with-knowledge';
 import { SearchEvent } from '@/lib/langgraph-search-engine';
+import { isRateLimited } from '@/lib/rate-limit';
+import { isHosted } from '@/lib/runtime';
+import { BYOKCredentials } from '@/lib/resolved-config';
+import { ErrorType, handleNextError } from '@/lib/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, context, knowledgeStackId } = await request.json();
+    const rateLimit = await isRateLimited(request, 'search-with-knowledge');
+    if (!rateLimit.success) {
+      return handleNextError(new Error('Rate limit exceeded'), ErrorType.RATE_LIMIT, 'search-with-knowledge');
+    }
+
+    const body = await request.json();
+    const { query, context, knowledgeStackId, credentials } = body as {
+      query: string;
+      context?: Array<{ query: string; response: string }>;
+      knowledgeStackId?: string;
+      credentials?: BYOKCredentials;
+    };
 
     if (!query) {
+      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    }
+
+    if (isHosted() && !credentials?.searchApiKey && !credentials?.llmApiKey) {
       return NextResponse.json(
-        { error: 'Query is required' }, 
+        { error: 'API credentials are required in hosted mode (BYOK)' },
         { status: 400 }
       );
     }
 
-    console.log('Search request:', { query, knowledgeStackId, hasContext: !!context });
+    const sessionId = request.headers.get('x-narada-session') || undefined;
 
-    // Create a ReadableStream for the search response
     const stream = new ReadableStream({
       async start(controller) {
+        const encoder = new TextEncoder();
+        let closed = false;
+
+        const safeEnqueue = (event: SearchEvent) => {
+          if (closed || request.signal.aborted) return;
+          try {
+            controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
+          } catch {
+            closed = true;
+          }
+        };
+
+        const onAbort = () => {
+          closed = true;
+          try {
+            controller.close();
+          } catch {
+            // already closed
+          }
+        };
+        request.signal.addEventListener('abort', onAbort, { once: true });
+
         try {
-          console.log('Starting unified search with knowledge...');
           await unifiedSearchWithKnowledge(
             query,
             context || [],
             knowledgeStackId,
-            (event: SearchEvent) => {
-              // Send each event to the client
-              const chunk = JSON.stringify(event) + '\n';
-              controller.enqueue(new TextEncoder().encode(chunk));
-            }
+            safeEnqueue,
+            { credentials, signal: request.signal, sessionId }
           );
-          
-          console.log('Search completed successfully');
-          controller.close();
+          if (!closed && !request.signal.aborted) {
+            controller.close();
+          }
         } catch (error) {
-          console.error('Search error:', error);
-          const errorChunk = JSON.stringify({
-            type: 'error',
-            error: error instanceof Error ? error.message : 'Search failed',
-            errorType: 'search'
-          }) + '\n';
-          controller.enqueue(new TextEncoder().encode(errorChunk));
-          controller.close();
+          if (!closed && !request.signal.aborted) {
+            safeEnqueue({
+              type: 'error',
+              error: error instanceof Error ? error.message : 'Search failed',
+              errorType: 'search',
+            });
+            controller.close();
+          }
+        } finally {
+          request.signal.removeEventListener('abort', onAbort);
         }
-      }
+      },
+      cancel() {
+        // Client disconnected
+      },
     });
 
     return new Response(stream, {
@@ -54,9 +95,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleNextError(error, ErrorType.SERVER_ERROR, 'search-with-knowledge');
   }
 }

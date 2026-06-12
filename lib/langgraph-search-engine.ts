@@ -3,7 +3,8 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ContextProcessor } from './context-processor';
 import { SEARCH_CONFIG } from './config';
 import type { SearchClientInterface } from './unified-search-client';
-import { LangGraphLLMClient, type LLMMessage } from './langgraph-llm-client';
+import { LangGraphLLMClient, type LLMConfig, type LLMMessage } from './langgraph-llm-client';
+import { safeParseJson } from './json-utils';
 
 // Event types remain the same for frontend compatibility
 export type SearchPhase = 
@@ -172,12 +173,13 @@ export class LangGraphSearchEngine {
   private llmClient: LangGraphLLMClient;
   private checkpointer?: MemorySaver;
 
-  constructor(searchClient: SearchClientInterface, options?: { enableCheckpointing?: boolean }) {
+  constructor(
+    searchClient: SearchClientInterface,
+    options?: { enableCheckpointing?: boolean; llmConfig?: Partial<LLMConfig>; signal?: AbortSignal }
+  ) {
     this.searchClient = searchClient;
     this.contextProcessor = new ContextProcessor();
-    
-    // Initialize LangGraph-native LLM client
-    this.llmClient = new LangGraphLLMClient();
+    this.llmClient = new LangGraphLLMClient(options?.llmConfig, { signal: options?.signal });
 
     // Enable checkpointing if requested
     if (options?.enableCheckpointing) {
@@ -1090,12 +1092,7 @@ ${sources.slice(0, SEARCH_CONFIG.MAX_SOURCES_TO_CHECK).map(s => {
 
     try {
       const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
-      let content = response.content;
-      
-      // Strip markdown code blocks if present
-      content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
-      
-      const results = JSON.parse(content);
+      const results = safeParseJson<Array<{ question: string; confidence: number; answer?: string; sources?: string[] }>>(response.content);
       
       // Update sub-queries with results
       return subQueries.map(sq => {
@@ -1165,9 +1162,13 @@ Return ONLY a JSON array of {question, searchQuery} objects.`),
 
     try {
       const response = await this.llmClient.invoke(this.convertMessagesToLLM(messages));
-      return JSON.parse(response.content);
-    } catch {
-      // Fallback: treat as single query
+      const parsed = safeParseJson<ExtractedQuery[]>(response.content);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new Error('Expected non-empty JSON array of sub-queries');
+      }
+      return parsed;
+    } catch (error) {
+      console.error('Failed to parse sub-queries from LLM response:', error);
       return [{ question: query, searchQuery: query }];
     }
   }

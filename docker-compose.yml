@@ -28,6 +28,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - RUNTIME_PROFILE=local
       # Qdrant Configuration
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_COLLECTION_NAME=narada_vectors
@@ -70,9 +71,21 @@ services:
       retries: 5
       start_period: 40s
 
+  # Optional: uncomment for local Ollama LLM/embeddings
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: narada-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   restart: unless-stopped
+
 volumes:
   qdrant_storage:
     driver: local
+  # ollama_data:
+  #   driver: local
 
 networks:
   default:

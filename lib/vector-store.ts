@@ -54,14 +54,21 @@ class InMemoryVectorStore implements InMemoryVectorStoreInterface {
   }
 
   // Add a document with embeddings to the vector store
-  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, unknown>): Promise<string[]> {
-    if (!this.embeddingClient) {
+  async addDocument(
+    stackId: string,
+    documentId: string,
+    chunks: string[],
+    metadata: Record<string, unknown>,
+    embeddingClient?: UnifiedEmbeddingClient
+  ): Promise<string[]> {
+    const client = embeddingClient ?? this.embeddingClient;
+    if (!client) {
       throw new Error('Embedding client not available. Please configure embedding provider.');
     }
 
     try {
       console.log(`Generating embeddings for ${chunks.length} chunks of document ${documentId}`);
-      const embeddings = await this.embeddingClient.embedTexts(chunks);
+      const embeddings = await client.embedTexts(chunks);
       
       const vectorIds: string[] = [];
       
@@ -100,8 +107,15 @@ class InMemoryVectorStore implements InMemoryVectorStoreInterface {
   }
 
   // Search for similar documents using vector similarity
-  async searchSimilar(stackId: string, query: string, limit: number = 5, threshold: number = 0.7): Promise<VectorSearchResult[]> {
-    if (!this.embeddingClient) {
+  async searchSimilar(
+    stackId: string,
+    query: string,
+    limit: number = 5,
+    threshold: number = 0.7,
+    embeddingClient?: UnifiedEmbeddingClient
+  ): Promise<VectorSearchResult[]> {
+    const client = embeddingClient ?? this.embeddingClient;
+    if (!client) {
       console.warn('Embedding client not available - cannot perform vector search');
       return [];
     }
@@ -110,7 +124,7 @@ class InMemoryVectorStore implements InMemoryVectorStoreInterface {
       console.log(`Searching vectors for query: "${query}" in stack ${stackId}`);
       
       // Get query embedding
-      const queryEmbedding = await this.embeddingClient.embedText(query);
+      const queryEmbedding = await client.embedText(query);
       
       // Filter vectors for the specific stack
       const stackVectors = this.vectors.filter(v => v.stackId === stackId);

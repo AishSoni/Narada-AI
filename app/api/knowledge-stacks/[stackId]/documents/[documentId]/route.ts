@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { knowledgeStackStore } from '@/lib/knowledge-stack-store';
+import { getStackStore } from '@/lib/stack-store';
 
 export async function DELETE(
   request: NextRequest,
@@ -7,21 +7,17 @@ export async function DELETE(
 ) {
   try {
     const { stackId, documentId } = await params;
-    
-    const success = knowledgeStackStore.deleteDocument(stackId, documentId);
+    const sessionId = request.headers.get('x-narada-session') || undefined;
+    const store = await getStackStore(sessionId);
+
+    const success = store.deleteDocument(stackId, documentId);
     if (!success) {
-      return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting document:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete document' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 });
   }
 }
