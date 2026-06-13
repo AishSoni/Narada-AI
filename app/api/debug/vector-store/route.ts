@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { vectorStore } from '@/lib/vector-store';
+import { requireLocal } from '@/lib/local-only';
 
 export async function GET() {
+  const blocked = requireLocal();
+  if (blocked) return blocked;
   try {
     // Check if vector store has a health check method (Qdrant implementation)
     if ('healthCheck' in vectorStore) {

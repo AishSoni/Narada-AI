@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { vectorStore } from '@/lib/vector-store';
 import { UnifiedEmbeddingClient } from '@/lib/unified-embedding-client';
 import { getAppConfig } from '@/lib/app-config';
+import { requireLocal } from '@/lib/local-only';
 
 export async function GET() {
+  const blocked = requireLocal();
+  if (blocked) return blocked;
   try {
     const config = getAppConfig();
     

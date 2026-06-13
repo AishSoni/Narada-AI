@@ -542,14 +542,17 @@ export function Chat() {
         if (!stackExists) {
           console.warn(`Selected knowledge stack ${selectedKnowledgeStack} not found. Falling back to web search.`);
           toast.warning('Selected knowledge stack is no longer available. Using web search instead.');
-          const result = await search(query, conversationContext, firecrawlApiKey || undefined);
+          const credentials = firecrawlApiKey.trim() ? { searchApiKey: firecrawlApiKey } : undefined;
+          const result = await search(query, conversationContext, credentials);
           stream = result.stream;
         } else {
-          const result = await searchWithKnowledge(query, conversationContext, selectedKnowledgeStack, firecrawlApiKey || undefined);
+          const credentials = firecrawlApiKey.trim() ? { searchApiKey: firecrawlApiKey } : undefined;
+          const result = await searchWithKnowledge(query, conversationContext, selectedKnowledgeStack, credentials);
           stream = result.stream;
         }
       } else {
-        const result = await search(query, conversationContext, firecrawlApiKey || undefined);
+        const credentials = firecrawlApiKey.trim() ? { searchApiKey: firecrawlApiKey } : undefined;
+        const result = await search(query, conversationContext, credentials);
         stream = result.stream;
       }
       let finalContent = '';

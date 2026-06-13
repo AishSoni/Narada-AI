@@ -1,6 +1,9 @@
 // Qdrant Vector Store implementation for Knowledge Stack embeddings
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { v5 as uuidv5 } from 'uuid';
 import { UnifiedEmbeddingClient } from './unified-embedding-client';
+
+const QDRANT_POINT_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 export interface VectorDocument {
   id: string;
@@ -48,16 +51,8 @@ export class QdrantVectorStore implements AdvancedVectorStore {
     this.initializeCollection();
   }
 
-  // Generate a numeric ID from a string (simple hash)
-  private generateNumericId(str: string): number {
-    let hash = 0;
-    if (str.length === 0) return hash;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
+  private toPointId(vectorId: string): string {
+    return uuidv5(vectorId, QDRANT_POINT_NAMESPACE);
   }
 
   private initializeEmbeddingClient(): void {
@@ -126,8 +121,15 @@ export class QdrantVectorStore implements AdvancedVectorStore {
   }
 
   // Add a document with embeddings to the vector store
-  async addDocument(stackId: string, documentId: string, chunks: string[], metadata: Record<string, unknown>): Promise<string[]> {
-    if (!this.embeddingClient) {
+  async addDocument(
+    stackId: string,
+    documentId: string,
+    chunks: string[],
+    metadata: Record<string, unknown>,
+    embeddingClient?: UnifiedEmbeddingClient
+  ): Promise<string[]> {
+    const client = embeddingClient ?? this.embeddingClient;
+    if (!client) {
       throw new Error('Embedding client not available. Please configure embedding provider.');
     }
 
@@ -137,18 +139,17 @@ export class QdrantVectorStore implements AdvancedVectorStore {
 
     try {
       console.log(`Generating embeddings for ${chunks.length} chunks of document ${documentId}`);
-      const embeddings = await this.embeddingClient.embedTexts(chunks);
+      const embeddings = await client.embedTexts(chunks);
       
       const vectorIds: string[] = [];
       const points = [];
       
       for (let i = 0; i < chunks.length; i++) {
         const vectorId = `${documentId}_chunk_${i}`;
-        // Generate a hash-based numeric ID since Qdrant requires integer or UUID
-        const numericId = this.generateNumericId(vectorId);
-        
+        const pointId = this.toPointId(vectorId);
+
         const point = {
-          id: numericId,
+          id: pointId,
           vector: embeddings[i],
           payload: {
             stackId,
@@ -192,8 +193,15 @@ export class QdrantVectorStore implements AdvancedVectorStore {
   }
 
   // Search for similar documents using vector similarity
-  async searchSimilar(stackId: string, query: string, limit: number = 5, threshold: number = 0.7): Promise<VectorSearchResult[]> {
-    if (!this.embeddingClient) {
+  async searchSimilar(
+    stackId: string,
+    query: string,
+    limit: number = 5,
+    threshold: number = 0.7,
+    embeddingClient?: UnifiedEmbeddingClient
+  ): Promise<VectorSearchResult[]> {
+    const client = embeddingClient ?? this.embeddingClient;
+    if (!client) {
       console.warn('Embedding client not available - cannot perform vector search');
       return [];
     }
@@ -206,7 +214,7 @@ export class QdrantVectorStore implements AdvancedVectorStore {
       console.log(`Searching Qdrant vectors for query: "${query}" in stack ${stackId}`);
       
       // Get query embedding
-      const queryEmbedding = await this.embeddingClient.embedText(query);
+      const queryEmbedding = await client.embedText(query);
       
       // Search in Qdrant
       const searchResult = await this.client.search(this.collectionName, {

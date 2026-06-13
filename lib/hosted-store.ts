@@ -1,13 +1,13 @@
+import { Redis } from '@upstash/redis';
+import * as fs from 'fs';
+import * as path from 'path';
 import { hybridSearch, SearchResult } from './search-engine';
 import { vectorStore } from './vector-store';
 import { chunkText } from './text-extraction';
-import { ResolvedConfig, toEmbeddingConfig } from './resolved-config';
+import { ResolvedConfig } from './resolved-config';
+import { toEmbeddingConfig } from './resolved-config';
 import { UnifiedEmbeddingClient } from './unified-embedding-client';
 import type { Document, KnowledgeStack, StackStore } from './stack-store';
-
-export type { Document, KnowledgeStack } from './stack-store';
-import * as fs from 'fs';
-import * as path from 'path';
 
 interface StoreData {
   stacks: KnowledgeStack[];
@@ -15,50 +15,59 @@ interface StoreData {
   lastSaved: string;
 }
 
-export class LocalFileStore implements StackStore {
+const HOSTED_TTL_SECONDS = 60 * 60 * 24; // 24 hours
+
+export class HostedStore implements StackStore {
   private stacks: KnowledgeStack[] = [];
   private documents: Document[] = [];
-  private persistenceFile: string;
-  private saveDebounceTimer: NodeJS.Timeout | null = null;
-  private initialized = false;
+  private loaded = false;
+  private redis: Redis | null = null;
+  private readonly storageKey: string;
+  private readonly tmpPath: string;
 
-  constructor() {
-    this.persistenceFile = path.join(process.cwd(), '.narada-stacks.json');
+  constructor(sessionId: string) {
+    this.storageKey = `narada:hosted:${sessionId}`;
+    this.tmpPath = path.join('/tmp', `narada-stacks-${sessionId}.json`);
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+      this.redis = Redis.fromEnv();
+    }
   }
 
   async ready(): Promise<void> {
-    if (this.initialized) return;
-    this.loadFromDisk();
-    this.initialized = true;
-  }
-
-  private loadFromDisk(): void {
+    if (this.loaded) return;
     try {
-      if (fs.existsSync(this.persistenceFile)) {
-        const data = fs.readFileSync(this.persistenceFile, 'utf-8');
-        const parsed: StoreData = JSON.parse(data);
+      if (this.redis) {
+        const data = await this.redis.get<StoreData>(this.storageKey);
+        if (data) {
+          this.stacks = data.stacks || [];
+          this.documents = data.documents || [];
+        }
+      } else if (fs.existsSync(this.tmpPath)) {
+        const parsed: StoreData = JSON.parse(fs.readFileSync(this.tmpPath, 'utf-8'));
         this.stacks = parsed.stacks || [];
         this.documents = parsed.documents || [];
       }
     } catch (error) {
-      console.warn('Failed to load knowledge stack data from disk:', error);
+      console.warn('Failed to load hosted store:', error);
     }
+    this.loaded = true;
   }
 
-  private saveToDisk(): void {
-    if (this.saveDebounceTimer) clearTimeout(this.saveDebounceTimer);
-    this.saveDebounceTimer = setTimeout(() => {
-      try {
-        const data: StoreData = {
-          stacks: this.stacks,
-          documents: this.documents,
-          lastSaved: new Date().toISOString(),
-        };
-        fs.writeFileSync(this.persistenceFile, JSON.stringify(data, null, 2));
-      } catch (error) {
-        console.error('Failed to save knowledge stack data to disk:', error);
+  private async persist(): Promise<void> {
+    const data: StoreData = {
+      stacks: this.stacks,
+      documents: this.documents,
+      lastSaved: new Date().toISOString(),
+    };
+    try {
+      if (this.redis) {
+        await this.redis.set(this.storageKey, data, { ex: HOSTED_TTL_SECONDS });
+      } else {
+        fs.writeFileSync(this.tmpPath, JSON.stringify(data, null, 2));
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to persist hosted store:', error);
+    }
   }
 
   getAllStacks(): KnowledgeStack[] {
@@ -71,14 +80,14 @@ export class LocalFileStore implements StackStore {
 
   addStack(stack: KnowledgeStack): void {
     this.stacks.push(stack);
-    this.saveToDisk();
+    void this.persist();
   }
 
   updateStack(id: string, updates: Partial<KnowledgeStack>): boolean {
     const index = this.stacks.findIndex((stack) => stack.id === id);
     if (index === -1) return false;
     this.stacks[index] = { ...this.stacks[index], ...updates };
-    this.saveToDisk();
+    void this.persist();
     return true;
   }
 
@@ -90,7 +99,7 @@ export class LocalFileStore implements StackStore {
     if ('removeStack' in vectorStore) {
       void (vectorStore as import('./qdrant-vector-store').AdvancedVectorStore).removeStack(id);
     }
-    this.saveToDisk();
+    void this.persist();
     return true;
   }
 
@@ -108,17 +117,11 @@ export class LocalFileStore implements StackStore {
       void this.generateDocumentEmbeddings(document, config);
     }
     this.updateStackDocumentCount(document.stackId);
-    this.saveToDisk();
+    void this.persist();
   }
 
   private async generateDocumentEmbeddings(document: Document, config?: ResolvedConfig): Promise<void> {
     if (!document.content) return;
-    if (
-      !('isEmbeddingAvailable' in vectorStore) ||
-      !(vectorStore as import('./qdrant-vector-store').AdvancedVectorStore).isEmbeddingAvailable()
-    ) {
-      return;
-    }
     try {
       const embeddingClient = config ? new UnifiedEmbeddingClient(toEmbeddingConfig(config)) : undefined;
       const chunks = chunkText(document.content, 1000, 200);
@@ -146,7 +149,7 @@ export class LocalFileStore implements StackStore {
     this.documents.splice(index, 1);
     vectorStore.removeDocument(documentId);
     this.updateStackDocumentCount(stackId);
-    this.saveToDisk();
+    void this.persist();
     return true;
   }
 
@@ -163,12 +166,15 @@ export class LocalFileStore implements StackStore {
 
     const embeddingClient = config ? new UnifiedEmbeddingClient(toEmbeddingConfig(config)) : undefined;
 
-    if (
-      'isEmbeddingAvailable' in vectorStore &&
-      (vectorStore as import('./qdrant-vector-store').AdvancedVectorStore).isEmbeddingAvailable()
-    ) {
+    if ('isEmbeddingAvailable' in vectorStore) {
       try {
-        const vectorResults = await vectorStore.searchSimilar(stackId, query, limit * 2, 0.7, embeddingClient);
+        const vectorResults = await vectorStore.searchSimilar(
+          stackId,
+          query,
+          limit * 2,
+          0.7,
+          embeddingClient
+        );
         if (vectorResults.length > 0) {
           return vectorResults
             .map((vr) => {
@@ -233,6 +239,3 @@ export class LocalFileStore implements StackStore {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }
-
-/** @deprecated Use getStackStore() from ./stack-store */
-export const knowledgeStackStore = new LocalFileStore();

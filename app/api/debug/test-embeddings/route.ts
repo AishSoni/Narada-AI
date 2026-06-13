@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vectorStore } from '@/lib/vector-store';
+import { requireLocal } from '@/lib/local-only';
 
 // Interface for collection info structure
 interface CollectionInfo {
@@ -15,6 +16,9 @@ interface CollectionInfo {
 }
 
 export async function POST(request: NextRequest) {
+  const blocked = requireLocal();
+  if (blocked) return blocked;
+
   try {
     const { text } = await request.json();
     

@@ -3,22 +3,23 @@
 import { createStreamableValue } from 'ai/rsc';
 import { UnifiedSearchClient } from '@/lib/unified-search-client';
 import { LangGraphSearchEngine as SearchEngine, SearchEvent } from '@/lib/langgraph-search-engine';
+import { BYOKCredentials, resolveConfig, toLLMConfig } from '@/lib/resolved-config';
 
-export async function search(query: string, context?: { query: string; response: string }[], apiKey?: string) {
+export async function search(
+  query: string,
+  context?: { query: string; response: string }[],
+  credentials?: BYOKCredentials
+) {
   const stream = createStreamableValue<SearchEvent>();
-  
-  // Create unified search client that handles all providers
-  const searchClient = new UnifiedSearchClient(apiKey);
-  const searchEngine = new SearchEngine(searchClient);
+  const config = resolveConfig(credentials);
+  const searchClient = new UnifiedSearchClient(config.searchApiKey);
+  const searchEngine = new SearchEngine(searchClient, { llmConfig: toLLMConfig(config) });
 
-  // Run search in background
   (async () => {
     try {
-      // Stream events as they happen
       await searchEngine.search(query, (event) => {
         stream.update(event);
       }, context);
-      
       stream.done();
     } catch (error) {
       stream.error(error);

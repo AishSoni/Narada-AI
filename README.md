@@ -7,7 +7,8 @@
   <p><strong>Narada AI Deep Research Agent</strong> – A powerful, locally-run research assistant that combines agentic web search, local knowledge bases, and extensible tool support.</p>
   
   <p>
-    <a href="docs/deployment/QUICK_DEPLOY.md"><strong>🚀 Deploy to Vercel</strong></a> •
+    <a href="#-quick-start-local"><strong>🏠 Local Quick Start</strong></a> •
+    <a href="#-hosted-demo-byok"><strong>☁️ Hosted Demo (BYOK)</strong></a> •
     <a href="docs/README.md"><strong>📖 Documentation</strong></a>
   </p>
 </div>
@@ -47,7 +48,9 @@ Narada AI Deep Research Agent consists of several key components working in harm
    - **MCP servers** for extensible tool support
 5. **AI Models**: OpenAI GPT-4o for search planning and LangGraph for workflow orchestration
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Local)
+
+Narada AI defaults to `RUNTIME_PROFILE=local`: secrets live in `.env.local`, stacks persist to `.narada-stacks.json`, and settings apply immediately without restart.
 
 ### Prerequisites
 
@@ -139,7 +142,35 @@ Narada AI offers two ways to configure your API providers and settings:
 5. Test your configuration using the "Test Configuration" button
 6. Save your settings
 
-Settings are automatically saved to `.env.local` and loaded on startup.
+Settings are automatically saved to `.env.local` and take effect immediately (no restart required in local profile).
+
+### Vector collection migration
+
+If you previously indexed documents with the old hash-based Qdrant point IDs, recreate your collection and re-upload documents:
+
+```bash
+# Delete and recreate the Qdrant collection, then re-upload your knowledge stacks
+curl -X DELETE "http://localhost:6333/collections/narada_vectors"
+```
+
+## ☁️ Hosted Demo (BYOK)
+
+For a constrained Vercel demo, set `RUNTIME_PROFILE=hosted`. Visitors bring their own API keys per session — nothing is persisted server-side.
+
+**Server env (Vercel):**
+
+```env
+RUNTIME_PROFILE=hosted
+QDRANT_URL=https://your-cluster.cloud.qdrant.io:6333
+QDRANT_API_KEY=...
+QDRANT_COLLECTION_NAME=narada_vectors
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+**Client (per session):** send `credentials` in the search request body and `x-narada-session` header for ephemeral knowledge stacks. OCR is disabled in hosted mode; PDF and DOCX only.
+
+See [docs/deployment/QUICK_DEPLOY.md](docs/deployment/QUICK_DEPLOY.md) for full hosted deployment steps.
 
 ### Method 2: Manual Environment Configuration
 

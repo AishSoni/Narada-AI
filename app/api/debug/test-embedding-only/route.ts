@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedEmbeddingClient } from '@/lib/unified-embedding-client';
+import { requireLocal } from '@/lib/local-only';
 
 export async function POST(request: NextRequest) {
+  const blocked = requireLocal();
+  if (blocked) return blocked;
   try {
     const { text } = await request.json();
     
