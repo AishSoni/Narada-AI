@@ -57,7 +57,7 @@ export async function unifiedSearchWithKnowledge(
   try {
     if (signal?.aborted) return;
 
-    const searchClient = new UnifiedSearchClient(config.searchApiKey);
+    const searchClient = new UnifiedSearchClient(config.searchApiKey, config.searchApiUrl);
     const searchEngine = new LangGraphSearchEngine(searchClient, {
       llmConfig: toLLMConfig(config),
       signal,

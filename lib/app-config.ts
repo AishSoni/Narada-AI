@@ -5,6 +5,7 @@ import { isLocal } from './runtime';
 export interface AppConfig {
   searchProvider: string;
   searchApiKey: string;
+  searchApiUrl?: string;
   llmProvider: string;
   llmApiKey: string;
   llmApiUrl?: string;
@@ -34,6 +35,7 @@ export function getAppConfig(): AppConfig {
   const embeddingProvider = env.EMBEDDING_PROVIDER || API_PROVIDERS.EMBEDDING.OPENAI;
 
   let searchApiKey = '';
+  let searchApiUrl = '';
   switch (searchProvider) {
     case API_PROVIDERS.SEARCH.FIRECRAWL:
       searchApiKey = env.FIRECRAWL_API_KEY || '';
@@ -46,6 +48,9 @@ export function getAppConfig(): AppConfig {
       break;
     case API_PROVIDERS.SEARCH.DUCKDUCKGO:
       searchApiKey = env.DUCKDUCKGO_API_KEY || '';
+      break;
+    case API_PROVIDERS.SEARCH.SEARXNG:
+      searchApiUrl = env.SEARXNG_API_URL || 'http://localhost:8080';
       break;
   }
 
@@ -88,6 +93,7 @@ export function getAppConfig(): AppConfig {
   return {
     searchProvider,
     searchApiKey,
+    searchApiUrl,
     llmProvider,
     llmApiKey,
     llmApiUrl,
@@ -102,7 +108,11 @@ export function getAppConfig(): AppConfig {
 export function isConfigValid(config?: AppConfig): boolean {
   const appConfig = config || getAppConfig();
 
-  if (!appConfig.searchApiKey) return false;
+  if (appConfig.searchProvider === API_PROVIDERS.SEARCH.SEARXNG) {
+    if (!appConfig.searchApiUrl) return false;
+  } else if (!appConfig.searchApiKey) {
+    return false;
+  }
   if (appConfig.llmProvider !== API_PROVIDERS.LLM.OLLAMA && !appConfig.llmApiKey) return false;
   if (appConfig.embeddingProvider !== API_PROVIDERS.EMBEDDING.OLLAMA && !appConfig.embeddingApiKey) {
     return false;
@@ -118,6 +128,7 @@ export function getProviderDisplayName(provider: string, type: 'search' | 'llm' 
         case API_PROVIDERS.SEARCH.TAVILY: return 'Tavily';
         case API_PROVIDERS.SEARCH.SERP: return 'SERP API';
         case API_PROVIDERS.SEARCH.DUCKDUCKGO: return 'DuckDuckGo';
+        case API_PROVIDERS.SEARCH.SEARXNG: return 'SearXNG';
         default: return provider;
       }
     case 'llm':

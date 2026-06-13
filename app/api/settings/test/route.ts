@@ -5,6 +5,7 @@ interface TestConfig {
   FIRECRAWL_API_KEY: string;
   TAVILY_API_KEY: string;
   SERP_API_KEY: string;
+  SEARXNG_API_URL: string;
   LLM_PROVIDER: string;
   OPENAI_API_KEY: string;
   OPENAI_LLM_MODEL: string;
@@ -53,6 +54,24 @@ async function testTavilyAPI(apiKey: string): Promise<boolean> {
       }),
     });
     
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function testSearxngAPI(apiUrl: string): Promise<boolean> {
+  try {
+    if (!apiUrl) return false;
+
+    const baseUrl = apiUrl.replace(/\/$/, '');
+    const response = await fetch(`${baseUrl}/search?q=test&format=json`, {
+      headers: {
+        'User-Agent': 'Narada-AI/1.0',
+        Accept: 'application/json',
+      },
+    });
+
     return response.ok;
   } catch {
     return false;
@@ -150,6 +169,8 @@ export async function POST(request: NextRequest) {
       results['Tavily API'] = await testTavilyAPI(config.TAVILY_API_KEY);
     } else if (config.SEARCH_API_PROVIDER === 'serp' && config.SERP_API_KEY) {
       results['SERP API'] = await testSerpAPI(config.SERP_API_KEY);
+    } else if (config.SEARCH_API_PROVIDER === 'searxng' && config.SEARXNG_API_URL) {
+      results['SearXNG API'] = await testSearxngAPI(config.SEARXNG_API_URL);
     }
     
     // Test LLM Provider

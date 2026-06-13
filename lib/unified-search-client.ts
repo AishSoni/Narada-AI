@@ -3,6 +3,7 @@ import { FirecrawlClient } from './firecrawl';
 import { TavilyClient } from './tavily';
 import { SerpClient } from './serp';
 import { DuckDuckGoClient } from './duckduckgo';
+import { SearxngClient } from './searxng';
 import { getAppConfig } from './app-config';
 import { API_PROVIDERS } from './config';
 
@@ -44,7 +45,7 @@ export class UnifiedSearchClient implements SearchClientInterface {
   private client: SearchClientInterface;
   private provider: string;
 
-  constructor(providedApiKey?: string) {
+  constructor(providedApiKey?: string, providedApiUrl?: string) {
     const config = getAppConfig();
     this.provider = config.searchProvider;
     
@@ -60,6 +61,9 @@ export class UnifiedSearchClient implements SearchClientInterface {
         break;
       case API_PROVIDERS.SEARCH.DUCKDUCKGO:
         this.client = new DuckDuckGoClient(providedApiKey || config.searchApiKey);
+        break;
+      case API_PROVIDERS.SEARCH.SEARXNG:
+        this.client = new SearxngClient(providedApiUrl || config.searchApiUrl);
         break;
       default:
         // Fallback to FireCrawl
@@ -95,6 +99,11 @@ export class UnifiedSearchClient implements SearchClientInterface {
           region: 'us-en',
           safesearch: 'moderate',
         };
+      } else if (this.client instanceof SearxngClient) {
+        providerOptions = {
+          max_results: options?.limit || 10,
+          language: 'en',
+        };
       }
       
       const response = await this.client.search(query, providerOptions);
@@ -107,6 +116,8 @@ export class UnifiedSearchClient implements SearchClientInterface {
       } else if (this.client instanceof SerpClient) {
         return this.client.formatResults(response);
       } else if (this.client instanceof DuckDuckGoClient) {
+        return this.client.formatResults(response);
+      } else if (this.client instanceof SearxngClient) {
         return this.client.formatResults(response);
       }
       
@@ -135,7 +146,11 @@ export class UnifiedSearchClient implements SearchClientInterface {
     }
     
     // For other providers, we can simulate mapping by searching for the domain
-    if (this.client instanceof TavilyClient || this.client instanceof SerpClient) {
+    if (
+      this.client instanceof TavilyClient ||
+      this.client instanceof SerpClient ||
+      this.client instanceof SearxngClient
+    ) {
       const domain = new URL(url).hostname;
       const searchResult = await this.search(`site:${domain}`, { max_results: options?.limit || 10 });
       

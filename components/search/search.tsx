@@ -12,7 +12,7 @@ export async function search(
 ) {
   const stream = createStreamableValue<SearchEvent>();
   const config = resolveConfig(credentials);
-  const searchClient = new UnifiedSearchClient(config.searchApiKey);
+  const searchClient = new UnifiedSearchClient(config.searchApiKey, config.searchApiUrl);
   const searchEngine = new SearchEngine(searchClient, { llmConfig: toLLMConfig(config) });
 
   (async () => {

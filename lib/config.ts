@@ -55,7 +55,8 @@ export const API_PROVIDERS = {
     FIRECRAWL: 'firecrawl',
     TAVILY: 'tavily',
     SERP: 'serp',
-    DUCKDUCKGO: 'duckduckgo'
+    DUCKDUCKGO: 'duckduckgo',
+    SEARXNG: 'searxng',
   },
   LLM: {
     OPENAI: 'openai',
@@ -104,6 +105,7 @@ export const ENV_KEYS = {
   FIRECRAWL_API_KEY: 'FIRECRAWL_API_KEY',
   TAVILY_API_KEY: 'TAVILY_API_KEY',
   SERP_API_KEY: 'SERP_API_KEY',
+  SEARXNG_API_URL: 'SEARXNG_API_URL',
   
   // LLM Provider
   LLM_PROVIDER: 'LLM_PROVIDER',
