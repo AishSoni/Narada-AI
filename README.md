@@ -48,6 +48,7 @@ Narada AI Deep Research Agent consists of several key components working in harm
    - **MCP servers** for extensible tool support
 5. **AI Models**: OpenAI GPT-4o for search planning and LangGraph for workflow orchestration
 
+
 ## 🚀 Quick Start (Local)
 
 Narada AI defaults to `RUNTIME_PROFILE=local`: secrets live in `.env.local`, stacks persist to `.narada-stacks.json`, and settings apply immediately without restart.
